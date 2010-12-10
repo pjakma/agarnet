@@ -12,6 +12,7 @@ import agarnet.protocols.host.PositionableHost;
 public class simhost extends PositionableHost<Long, simhost, anipanel.Node> {
   private static final long serialVersionUID = -7814606266303045281L;
   
+  @SuppressWarnings("unused")
   private simhost () {}
   
   public simhost (Simulation<Long,simhost> simapp, 
