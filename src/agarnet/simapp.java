@@ -118,18 +118,21 @@ public class simapp extends Observable
    * the reasoning in the "Generics Tutorial" PDF surely invites a better
    * solution.
    */
+  @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_peer () {
     return new protocol [] {
       //new transport_protocol<Long, simhost, link<simhost>> (this, network),
       new peer<Long,simhost> (this),
     };
   }
+  @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_leech () {
     return new protocol [] {
       //new transport_protocol<Long, simhost, link<simhost>> (this, network),
       new leech<Long,simhost> (this),
     };
   }
+  @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_seed () {
     return new protocol [] {
       //new transport_protocol<Long, simhost, link<simhost>> (this, network),
@@ -352,7 +355,7 @@ public class simapp extends Observable
   
   static void usage (String s) {
     if (s != null)
-          System.out.println ("Error: " + s);
+      System.out.println ("Error: " + s);
     
     String indent = "    ";
     StringBuilder sb = new StringBuilder ();
@@ -830,8 +833,8 @@ public class simapp extends Observable
     
     if (edge == null) {
       debug.printf (debug.levels.WARNING,
-                    "tx called for non-existent edge "
-                    + from + " -> " + to);
+                    "tx called for non-existent edge %s -> %s!",
+                    from, to);
       return false;
     }
     sim_stats.messages_sent++;
