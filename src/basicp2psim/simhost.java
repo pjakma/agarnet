@@ -1,4 +1,4 @@
-package agarnet;
+package basicp2psim;
 
 import java.awt.Color;
 import java.util.HashMap;

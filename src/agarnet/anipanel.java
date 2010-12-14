@@ -36,7 +36,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
   private int mouse_x;
   private int mouse_y;
   
-  anipanel (Simulation<I,H> s) {
+  public anipanel (Simulation<I,H> s) {
     this.s = s;
     
     s.addObserver (this);
@@ -64,7 +64,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
     );
   }
   
-  double noderadius () {
+  public double noderadius () {
     double noderadius;
     int dmin = Math.min (s.model_size.height, s.model_size.width);
     

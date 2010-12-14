@@ -1,4 +1,4 @@
-package agarnet;
+package basicp2psim;
 
 import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
@@ -16,6 +16,8 @@ import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.*;
 import org.nongnu.multigraph.rewire.*;
 
+
+import agarnet.anipanel;
 import agarnet.framework.AbstractLongSim;
 import agarnet.link.*;
 import agarnet.perturb.RandomMove;
