@@ -1,4 +1,4 @@
-package agarnet.protocols.peer;
+package basicp2psim.protocols.peer;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -8,11 +8,12 @@ import java.util.Set;
 
 import org.nongnu.multigraph.debug;
 
+import basicp2psim.protocols.peer.data.file;
+
 import agarnet.data.marshall;
 import agarnet.framework.Simulation;
 import agarnet.protocols.AbstractProtocol;
 import agarnet.protocols.protocol;
-import agarnet.protocols.peer.data.file;
 
 public class peer<I,N> extends AbstractProtocol<I>
 					           implements PeerTemplate<I> {  

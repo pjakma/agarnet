@@ -27,9 +27,9 @@ public class simhost extends AnimatableHost<Long, simhost> {
     };
     private static Map<String,Node> peer2node = new HashMap <String,Node> ();
     static {
-      peer2node.put (agarnet.protocols.peer.peer.class.getName (), peer);
-      peer2node.put (agarnet.protocols.peer.seed.class.getName (), seed);
-      peer2node.put (agarnet.protocols.peer.leech.class.getName (), leech);
+      peer2node.put (basicp2psim.protocols.peer.peer.class.getName (), peer);
+      peer2node.put (basicp2psim.protocols.peer.seed.class.getName (), seed);
+      peer2node.put (basicp2psim.protocols.peer.leech.class.getName (), leech);
     }
     public Color colour () {
       return colours[this.ordinal ()];

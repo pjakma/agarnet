@@ -1,7 +1,7 @@
-package agarnet.protocols.peer;
+package basicp2psim.protocols.peer;
 
+import basicp2psim.protocols.peer.data.file;
 import agarnet.framework.resetable;
-import agarnet.protocols.peer.data.file;
 
 public interface PeerTemplate<N> extends resetable {
   

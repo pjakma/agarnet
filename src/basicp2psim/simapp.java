@@ -16,15 +16,16 @@ import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.*;
 import org.nongnu.multigraph.rewire.*;
 
+import basicp2psim.protocols.peer.leech;
+import basicp2psim.protocols.peer.peer;
+import basicp2psim.protocols.peer.seed;
+
 
 import agarnet.anipanel;
 import agarnet.framework.AbstractLongSim;
 import agarnet.link.*;
 import agarnet.perturb.RandomMove;
 import agarnet.protocols.*;
-import agarnet.protocols.peer.leech;
-import agarnet.protocols.peer.peer;
-import agarnet.protocols.peer.seed;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
 

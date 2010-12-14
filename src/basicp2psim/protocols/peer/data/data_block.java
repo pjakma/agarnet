@@ -1,4 +1,4 @@
-package agarnet.protocols.peer.data;
+package basicp2psim.protocols.peer.data;
 
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;

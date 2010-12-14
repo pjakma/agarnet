@@ -1,12 +1,13 @@
-package agarnet.protocols.peer;
+package basicp2psim.protocols.peer;
 
 import java.util.Set;
 
 import org.nongnu.multigraph.debug;
 
+import basicp2psim.protocols.peer.data.file;
+
 import agarnet.data.*;
 import agarnet.framework.Simulation;
-import agarnet.protocols.peer.data.file;
 
 /**
  * A peer which, in addition to doing all the normal peer things, also
