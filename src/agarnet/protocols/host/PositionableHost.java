@@ -7,16 +7,16 @@ import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_stats;
 import agarnet.protocols.protocol_stats.stat;
 
-public class PositionableHost<I,N,T> extends AbstractPositionableNode
+public class PositionableHost<I,N> extends AbstractPositionableNode
                                    implements protocol<I> {
-  protected host<I,N,T> host;
+  protected host<I,N> host;
   private boolean movable = true;
   
   protected PositionableHost () {}
-  public PositionableHost (Simulation<I,N> sim, T type,
+  public PositionableHost (Simulation<I,N> sim,
                            boolean movable,
                            protocol<I> [] protocols) {
-    this.host = new host<I,N,T> (sim, type, protocols);
+    this.host = new host<I,N> (sim, protocols);
     this.movable = movable;
   }
   
@@ -38,15 +38,12 @@ public class PositionableHost<I,N,T> extends AbstractPositionableNode
   public void tick () {
     host.tick ();
   }
-  public PositionableHost<I,N,T> setId (I id) {
+  public PositionableHost<I,N> setId (I id) {
     host.setId (id);
     return this;
   }
   public I getId () {
     return host.getId ();
-  }
-  public T get_type () {
-    return host.get_type ();
   }
   
   public void down (I dst, byte [] data) {

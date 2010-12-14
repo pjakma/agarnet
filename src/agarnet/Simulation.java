@@ -1,13 +1,26 @@
 package agarnet;
 
+import java.awt.Dimension;
+import java.util.Observable;
 import java.util.Set;
+import org.nongnu.multigraph.*;
 
-public interface Simulation<I,N> {
+import agarnet.link.link;
+
+public abstract class Simulation<I,H> extends Observable {
+	public final Graph<H,link<H>> network;
+	public final Dimension model_size;
+	
+	public Simulation (Graph<H,link<H>> g, Dimension d) {
+	  this.model_size = d;
+	  this.network = g;
+	}
+	
 	/**
 	 * @param The node to query the simulation about
 	 * @return The set of nodes which are connected to the given node.
 	 */
-	public Set<I> connected (I node);
+	abstract public Set<I> connected (I node);
 	
 	/**
 	 * retrieve the appropriate node for the given ID
@@ -18,7 +31,7 @@ public interface Simulation<I,N> {
 	 * protocol stack, usually.
 	 * @param
 	 */
-	public boolean tx (I from, I to, byte [] data);
+	abstract public boolean tx (I from, I to, byte [] data);
 	
 	/**
 	 * Map from the N-typed Node object from which the network Graph is made
@@ -27,6 +40,6 @@ public interface Simulation<I,N> {
 	 * Using these methods is a layering violation and generally discouraged. 
 	 * However there may be certain, very special cases where this is justified.
 	 */
-	public N id2node (I node);
-	public I node2id(N node);
+	abstract public H id2node (I node);
+	abstract public I node2id(H node);
 }

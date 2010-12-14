@@ -23,15 +23,14 @@ import agarnet.protocols.protocol_stats.stat;
  * @param <T> The type of a value the simulation uses to quickly between
  *            different kinds of hosts, for the purposes of the simulation.
  */
-public class host<I,N,T> extends AbstractProtocol<I> 
+public class host<I,N> extends AbstractProtocol<I> 
                        implements protocol<I> {
   private protocol<I> [] protocols;
   Simulation<I,N> sim;
-  private T type;
   
   /* the amount of cpu power left in this tick */;
   private int cpu;
-  private final int cpu_per_tick = 20;
+  private static final int cpu_per_tick = 20;
   
   private class recvd_msg {
     final I src;
@@ -45,10 +44,9 @@ public class host<I,N,T> extends AbstractProtocol<I>
   
   Queue<recvd_msg> inputbuf = new LinkedList<recvd_msg> ();
   
-  host (Simulation<I,N> sim, T type, protocol<I> [] protocols) {
+  host (Simulation<I,N> sim, protocol<I> [] protocols) {
     this.sim = sim;
     this.protocols = protocols;
-    this.type = type;
     cpu = cpu_per_tick;
   }
   
@@ -64,7 +62,7 @@ public class host<I,N,T> extends AbstractProtocol<I>
     above = protocols[0];
   }
   
-  public host<I,N,T> setId (I id) {
+  public host<I,N> setId (I id) {
     selfId = id;
     stack_protocols ();
     super.setId (id);
@@ -124,12 +122,9 @@ public class host<I,N,T> extends AbstractProtocol<I>
   }
   
   public String toString () {
-    return "(" + type + "," + selfId + ")";
+    return "(" + selfId + ")";
   }
   
-  public T get_type () {
-    return type;
-  }
   public void reset () {
     I id = selfId;
     

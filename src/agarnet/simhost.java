@@ -1,7 +1,7 @@
 package agarnet;
 
 import agarnet.protocols.protocol;
-import agarnet.protocols.host.PositionableHost;
+import agarnet.protocols.host.AnimatableHost;
 
 /* This is a host type for:
  * 
@@ -9,7 +9,7 @@ import agarnet.protocols.host.PositionableHost;
  * 
  * Basically, this is what Java makes you do to get typedefs.
  */
-public class simhost extends PositionableHost<Long, simhost, anipanel.Node> {
+public class simhost extends AnimatableHost<Long, simhost, anipanel.Node> {
   private static final long serialVersionUID = -7814606266303045281L;
   
   @SuppressWarnings("unused")

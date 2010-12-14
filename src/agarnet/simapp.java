@@ -32,64 +32,10 @@ import agarnet.variables.*;
 import agarnet.variables.atoms.*;
 
 
-public class simapp extends Observable 
-          implements Simulation<Long,simhost>, Observer {  
+public class simapp extends AbstractLongSim<simhost> implements Observer {  
   private Random r = new Random ();
-  Graph<simhost,link<simhost>> network;
-  private anipanel ap;
-  Dimension model_size;
-  /* so we can ignore observer events initially */
-  private boolean doing_network_setup = true;
-  
-  static class sim_stats {
-    private long messages_sent = 0;
-    private long ticks;
-  }
-  sim_stats sim_stats = new sim_stats ();
-  
-  /* map Graph node objects to stable, persistent IDs that protocols can use */
-  private static class idmap {
-    private long nextid = 1;
-    
-    Map<Long,simhost> id2simh = new HashMap<Long,simhost> ();
-    Map<simhost,Long> simh2id = new HashMap<simhost,Long> ();
-    
-    synchronized Long get (simhost s) {
-      Long l = simh2id.get (s);
-      
-      if (s == null)
-        throw new AssertionError ("idmap: simhost must not be null!");
-      
-      if (l != null) {
-        return l;
-      }
-      
-      l = nextid++;
-      
-      if (id2simh.put (l, s) != null)
-        throw new AssertionError ("id already exists, impossible, wtf?" + l);
-            
-      simh2id.put (s, l);
-      return l;
-    }
-    synchronized simhost get (Long l) {
-      return id2simh.get (l);
-    }
-    
-    synchronized public String toString () {
-      StringBuilder sb = new StringBuilder ();
-      for (simhost s : simh2id.keySet ()) {
-        sb.append (s);
-        sb.append (" -> ");
-        sb.append (get (s));
-        sb.append (" (back?: ");
-        sb.append (id2simh.containsKey (get(s)));
-        sb.append (")\n");
-      }
-      return sb.toString ();
-    }
-  }
-  idmap idmap = new idmap ();
+  private anipanel<Long, simhost> ap;
+  private RandomMove<simhost,link<simhost>> moverewire = null;
   
   private link<simhost> _gen_link (simhost from, simhost to,
                                 int maxbandwidth, int maxlatency) {
@@ -98,12 +44,6 @@ public class simapp extends Observable
                                          1 + r.nextInt (maxlatency));
     ul2 = new unilink<simhost> (to, ul1.bandwidth, ul1.latency);
     return new link<simhost> (ul1, ul2);
-  }
-  public Long node2id (simhost s) {
-    return idmap.get (s);
-  }
-  public simhost id2node (Long l) {
-    return idmap.get (l);
   }
   /* Java's handling of generic arrays seems less than useful. Rather than
    * restricting up-conversions (i.e. casting foo<specific_type> [] to 
@@ -150,33 +90,29 @@ public class simapp extends Observable
   }
   
   public simapp (Dimension d) {
-    SimpleGraph<simhost,link<simhost>> sg
-      = new SimpleGraph<simhost,link<simhost>> ();
-    network = sg;
-    sg.addObserver (this);
+    super (d);
     
-    model_size = d;    
-      /* create a network */
-      for (int i = 0; i < conf_peers.get (); i++) {
-          simhost p; 
+    /* create a network */
+    for (int i = 0; i < conf_peers.get (); i++) {
+      simhost p; 
           
-          if (conf_leeches.get () < 1
-              && r.nextFloat () <= conf_leeches.get ())
-            p = get_host (anipanel.Node.leech, true, new_protstack_leech ());
-          else
-            p = get_host (anipanel.Node.peer, true, new_protstack_peer ());
+      if (conf_leeches.get () < 1
+          && r.nextFloat () <= conf_leeches.get ())
+    	p = get_host (anipanel.Node.leech, true, new_protstack_leech ());
+      else
+        p = get_host (anipanel.Node.peer, true, new_protstack_peer ());
           
-          network.add (p);
-      }
+      network.add (p);
+    }
       
-      if (conf_leeches.get () >= 1) {
-        for (int i = 0; i < conf_leeches.get (); i++) {
-          simhost p = get_host (anipanel.Node.leech, true, new_protstack_leech ());
-          network.add (p);
-        }
+    if (conf_leeches.get () >= 1) {
+      for (int i = 0; i < conf_leeches.get (); i++) {
+        simhost p = get_host (anipanel.Node.leech, true, new_protstack_leech ());
+        network.add (p);
       }
+    }
       
-      network.add (get_host (anipanel.Node.seed, false, new_protstack_seed ()));
+    network.add (get_host (anipanel.Node.seed, false, new_protstack_seed ()));
   }
   
   final static IntConfigOption conf_peers, conf_runs,
@@ -508,7 +444,7 @@ public class simapp extends Observable
     
     JFrame jf = null;
     if (conf_gui.get ()) {
-      s.ap = new anipanel (s);
+      s.ap = new anipanel<Long,simhost> (s);
       jf = new JFrame ();
       jf.add (s.ap);
       jf.pack ();
@@ -519,35 +455,17 @@ public class simapp extends Observable
     }
     /* Use random as initial layout */
     Layout.factory ("Random", s.network, s.model_size, 10).layout (1);
-    s.doing_network_setup = false;
     
-    for (int i = 0; i < conf_runs.get (); i++) {
-      System.out.println ("# starting run " + i);
-      
-      /* reset the network, not needed first time around, but no harm
-       * in exercising the code anyway
-       */
-      for (simhost p : s.network) {
-        p.reset ();
-        for (Edge<simhost,link<simhost>> e : s.network.edges (p))
-          e.label ().reset ();
-      }
-      
-      s.rewire (conf_topology);
-      
-      if (conf_gui.get ())
-        s.layout ();
-            
-      s.describe_begin ();
-      
-      long start = System.currentTimeMillis ();
-      s.run ();
-      long fin = System.currentTimeMillis ();
-      
-      System.out.printf ("Runtime: %.3f seconds\n", (float)(fin - start) / 1000);
-      s.describe_end ();
+    if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
+      s.moverewire = new RandomMove<simhost,link<simhost>> (
+                      s.network, s.default_edge_labeler, s.model_size,
+                      ((FloatVar) conf_perturb.subopts.get ("speed")).get (),
+                      ((IntVar) conf_perturb.subopts.get ("maxrange")).get ());
     }
+    
+    s.main_loop ();
   }
+  
   /* Common edgelabeler for the rewire algorithms */
   private EdgeLabeler<simhost, link<simhost>> default_edge_labeler
     = new EdgeLabeler<simhost, link<simhost>> () {
@@ -556,7 +474,9 @@ public class simapp extends Observable
           }
   };
   
-  void rewire (TopologyConfigOption tconf) {
+  protected void rewire () {
+    TopologyConfigOption tconf = conf_topology;
+    
     /* Wire up the graph in some fashion */ 
     if (tconf.get ().equals ("Random")) {
       new RandomRewire<simhost, link<simhost>> (network, default_edge_labeler,
@@ -585,10 +505,14 @@ public class simapp extends Observable
     for (simhost p : network)
       p.setMass (network.nodal_outdegree (p));
     
+    if (conf_gui.get ())
+      layout ();
+    
     setChanged ();
+    
   }
 
-  void describe_end () {
+  protected void describe_end () {
     System.out.println ("Disconnected: "
                         + TraversalMetrics.count (network,
                           new TraversalMetrics.node_test<simhost> () {
@@ -597,9 +521,9 @@ public class simapp extends Observable
                               return (test.getSize () == 0);
                           }}));
 
-    System.out.println ("Messages Sent: " + sim_stats.messages_sent);
+    System.out.println ("Messages Sent: " + sim_stats.get_messages_sent ());
     System.out.println ("Converged: " + has_converged ());
-    System.out.println ("Ticks: " + sim_stats.ticks);
+    System.out.println ("Ticks: " + sim_stats.get_ticks ());
     System.out.println ("Memory: " + Runtime.getRuntime ().totalMemory ()
                         + " " + (Runtime.getRuntime ().totalMemory () >> 20)
                         + " MiB");
@@ -608,7 +532,7 @@ public class simapp extends Observable
     System.out.println ("End stats");
   }
   
-  void describe_begin () {
+  protected void describe_begin () {
     /* NB: Be careful to avoid marshalling strings to pass to debug statements
      * otherwise you may take a good bit of the cost for the debug, even
      * when not enabled.
@@ -645,7 +569,7 @@ public class simapp extends Observable
       System.out.println (count++ + ": " + val);
   }
   
-  void layout () {
+  private void layout () {
     int maxiterations = (conf_layout.get ().equals ("Force")
                       ? ((IntVar)conf_layout.subopts
                                     .get ("Force", "maxiterations")).get ()
@@ -702,108 +626,7 @@ public class simapp extends Observable
     }
   }
   
-  private static class recent_activity {
-    boolean [] ac;
-    int head = 0;
-    
-    recent_activity (int extent, boolean initial) {
-      ac = new boolean[extent];
-      for (int i = 0; i < extent; i++)
-        ac[i] = initial;
-    }
-    
-    void set (boolean state) {
-      ac[head] = state;
-      head = (head + 1) % ac.length;
-    }
-    
-    boolean was_there (boolean kind) {
-      for (int i = 0; i < ac.length; i++)
-        if (ac[i] == kind)
-          return true;
-      return false;
-    }
-  }
-  
-  /* the main loop of the simulation */
-  void run () {
-    sim_stats.ticks = 0;
-    sim_stats.messages_sent = 0;
-    recent_activity ra_link = new recent_activity (conf_period.get (), true);
-    recent_activity ra_notconverged 
-      = new recent_activity (conf_period.get (), false);
-    
-    boolean dogui = conf_gui.get ();
-    boolean perturb = ((BooleanVar)conf_perturb.subopts.get ("perturb")).get ();
-    RandomMove<simhost,link<simhost>> moverew = null;
-    
-    if (perturb)
-      moverew = new RandomMove<simhost,link<simhost>> (
-          network, default_edge_labeler, model_size,
-          ((FloatVar) conf_perturb.subopts.get ("speed")).get (),
-          ((IntVar) conf_perturb.subopts.get ("maxrange")).get ());
-    
-    while (ra_link.was_there (true) && ra_notconverged.was_there (false)) {
-      /* Links have to be ticked over separately from nodes, otherwise
-       * a message might get across multiple nodes and links in just one tick. 
-       */
-      debug.println ("ticking links");
-      for (simhost p : network)
-        for (Edge<simhost,link<simhost>> e : network.edges (p)) {
-          /* edges are undirected, but they have a polarity, thanks
-           * to to/from aspects of the label. We can use that to ensure
-           * we tick a link only from one side, and hence only once.
-           */
-          e.label ().get (p).tick ();
-        }
-      
-      /* now tick the nodes and deliver any messages to them */
-      debug.println ("ticking nodes");
-      for (simhost p : network) {
-        p.tick ();
-        
-        for (Edge<simhost,link<simhost>> e : network.edges (p)) {          
-          /* dequeue from the link to the connected peer */
-          byte [] data;
-          
-          if (e.label ().size () > 0)
-            setChanged ();
-          
-          while ((data = e.label ().get (p).poll ()) != null) {
-            debug.printf ("Dequeue on link %s\n", e);  
-            e.to ().up (idmap.get (p), data);
-          }
-        }
-        
-        if (p.hasChanged ())
-          setChanged ();
-      }
-      
-      if (perturb) {
-        moverew.rewire ();
-        setChanged ();
-      }
-      
-      ra_link.set (this.hasChanged ());
-      ra_notconverged.set (this.has_converged ());
-      
-      notifyObservers ();
-      
-      sim_stats.ticks++;
-      
-      /* sleep only matters for gui */
-      if (!dogui)
-        continue;
-      
-      try {
-        Thread.sleep (conf_sleep.get ());
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-  
-  boolean has_converged () {
+  protected boolean has_converged () {
     float f = 0;
     
     for (simhost h : network) {
@@ -819,42 +642,24 @@ public class simapp extends Observable
   }
   
   @Override
-  public Set<Long> connected (Long node) {
-    Set<Long> ids = new HashSet<Long> ();
-    for (simhost s : network.successors (idmap.get (node)))
-        ids.add (idmap.get (s));
-    return ids;
+  protected int get_runs () {
+    return conf_runs.get ();
   }
   @Override
-  public boolean tx (Long from, Long to, byte [] data) {
-    Edge<simhost, link<simhost>> edge = network.edge (idmap.get (from), idmap.get (to));
-    
-    debug.printf ("tx: %s %s -> %s\n", data, from, to);
-    
-    if (edge == null) {
-      debug.printf (debug.levels.WARNING,
-                    "tx called for non-existent edge %s -> %s!",
-                    from, to);
-      return false;
-    }
-    sim_stats.messages_sent++;
-    
-    return edge.label ().get (idmap.get (from)). offer (data);
+  protected int get_period () {
+    return conf_period.get ();
   }
-  
-  public void update (Observable o, Object arg) {
-    debug.printf ("update, in setup: %s, object: %s\n",
-                  doing_network_setup, ((simhost) null));
-    if (doing_network_setup)
+  @Override
+  protected int get_sleep () {
+    return conf_sleep.get ();
+  }
+  @Override
+  protected void perturb () {
+    if (!((BooleanVar)conf_perturb.subopts.get ("perturb")).get ())
       return;
-    
-    /* we have to notify all hosts, so long as we don't have an in-sim
-     * routing protocol
-     */
-    //if (arg != null)
-    //  ((simhost) arg).link_update ();
-    //else
-      for (simhost sh : network)
-        sh.link_update ();
+   
+    moverewire.rewire ();
+    layout ();
+    setChanged ();
   }
 }

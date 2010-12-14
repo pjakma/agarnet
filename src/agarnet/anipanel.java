@@ -17,19 +17,19 @@ import java.util.Observer;
 import javax.swing.JPanel;
 
 import org.nongnu.multigraph.Edge;
-import org.nongnu.multigraph.debug;
 import org.nongnu.multigraph.layout.Vector2D;
 
 import agarnet.link.link;
-import agarnet.protocols.peer.peer;
-import agarnet.protocols.peer.data.data_block;
+import agarnet.protocols.host.AnimatableHost;
 
-public class anipanel extends JPanel implements Observer {
+public class anipanel<I, H extends AnimatableHost<Long,H,anipanel.Node>>
+		extends JPanel
+		implements Observer {
   /**
    * 
    */
   private static final long serialVersionUID = 4635455780045359317L;
-  simapp s;
+  Simulation<I,H> s;
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
   static final Color peer = Color.BLUE.darker ();
@@ -62,7 +62,7 @@ public class anipanel extends JPanel implements Observer {
     }
   }
   
-  anipanel (simapp s) {
+  anipanel (Simulation<I,H> s) {
     this.s = s;
     
     s.addObserver (this);
@@ -144,10 +144,10 @@ public class anipanel extends JPanel implements Observer {
       g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
     
     try {
-      for (simhost p : s.network) {
+      for (H p : s.network) {
         Point2D pos = p.getPosition ();
         
-        for (Edge<simhost, link<simhost>> edge : s.network.edges (p)) {
+        for (Edge<H, link<H>> edge : s.network.edges (p)) {
           /* we only want to process an edge once, luckily edges in an
            * undirected graph still have a polarity we can filter on
            */
@@ -183,7 +183,7 @@ public class anipanel extends JPanel implements Observer {
       if (mouse_in_panel)
         t.inverseTransform (new Point2D.Double (mouse_x, mouse_y), mousep);
       
-      for (simhost p : s.network) {
+      for (H p : s.network) {
         boolean show_tip = false;
         
         g.setColor (p.get_type ().colour ());
