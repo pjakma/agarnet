@@ -22,6 +22,7 @@ import org.nongnu.multigraph.metrics.*;
 import org.nongnu.multigraph.rewire.*;
 
 import agarnet.anipanel.Node;
+import agarnet.framework.AbstractLongSim;
 import agarnet.link.*;
 import agarnet.perturb.RandomMove;
 import agarnet.protocols.*;

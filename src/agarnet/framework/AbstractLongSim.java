@@ -1,4 +1,4 @@
-package agarnet;
+package agarnet.framework;
 
 import java.awt.Dimension;
 import java.util.HashMap;
@@ -12,7 +12,6 @@ import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.SimpleGraph;
 import org.nongnu.multigraph.debug;
 
-import agarnet.framework.Simulation;
 import agarnet.link.link;
 import agarnet.protocols.host.PositionableHost;
 
@@ -31,23 +30,23 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   /* so we can ignore observer events initially */
   protected boolean doing_network_setup = true;
   protected idmap<H> idmap = new idmap<H> ();
+  protected sim_stats sim_stats = new sim_stats ();
   
-  static class sim_stats {
+  protected class sim_stats {
     private long messages_sent = 0;
     public long get_messages_sent () { return messages_sent; }
     private long ticks;
     public long get_ticks () { return ticks; }
   }
-  sim_stats sim_stats = new sim_stats ();
   
   /* map Graph node objects to stable, persistent IDs that protocols can use */
-  static class idmap<N> {
+  protected class idmap<N> {
     private long nextid = 1;
     
     Map<Long,N> id2simh = new HashMap<Long,N> ();
     Map<N,Long> simh2id = new HashMap<N,Long> ();
     
-    synchronized Long get (N n) {
+    synchronized public Long get (N n) {
       Long l = simh2id.get (n);
       
       if (n == null)
@@ -65,7 +64,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       simh2id.put (n, l);
       return l;
     }
-    synchronized N get (Long l) {
+    synchronized public N get (Long l) {
       return id2simh.get (l);
     }
     
@@ -100,7 +99,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   abstract protected void describe_end ();
   abstract protected void rewire ();
   
-  final void main_loop () {    
+  final public void main_loop () {    
     doing_network_setup = false;
     int runs = get_runs ();
     
