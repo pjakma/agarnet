@@ -1,6 +1,6 @@
 package agarnet.protocols.host;
 
-import agarnet.Simulation;
+import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 
 public class AnimatableHost<I,N,T> extends PositionableHost<I,N> {

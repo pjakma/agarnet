@@ -2,7 +2,7 @@ package agarnet.protocols.host;
 
 import org.nongnu.multigraph.layout.AbstractPositionableNode;
 
-import agarnet.Simulation;
+import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_stats;
 import agarnet.protocols.protocol_stats.stat;

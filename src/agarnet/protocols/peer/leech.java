@@ -2,7 +2,7 @@ package agarnet.protocols.peer;
 
 import java.util.Set;
 
-import agarnet.Simulation;
+import agarnet.framework.Simulation;
 import agarnet.protocols.peer.data.file;
 import agarnet.protocols.transport.data.message;
 

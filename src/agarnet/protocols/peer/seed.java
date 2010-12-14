@@ -4,8 +4,8 @@ import java.util.Set;
 
 import org.nongnu.multigraph.debug;
 
-import agarnet.Simulation;
 import agarnet.data.*;
+import agarnet.framework.Simulation;
 import agarnet.protocols.peer.data.file;
 
 /**

@@ -8,8 +8,8 @@ import org.nongnu.multigraph.Graph;
 import org.nongnu.multigraph.ShortestPathFirst;
 import org.nongnu.multigraph.debug;
 
-import agarnet.Simulation;
 import agarnet.data.marshall;
+import agarnet.framework.Simulation;
 import agarnet.protocols.AbstractProtocol;
 import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_stats.stat;

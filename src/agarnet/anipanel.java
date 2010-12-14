@@ -19,6 +19,7 @@ import javax.swing.JPanel;
 import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.layout.Vector2D;
 
+import agarnet.framework.Simulation;
 import agarnet.link.link;
 import agarnet.protocols.host.AnimatableHost;
 

@@ -12,6 +12,7 @@ import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.SimpleGraph;
 import org.nongnu.multigraph.debug;
 
+import agarnet.framework.Simulation;
 import agarnet.link.link;
 import agarnet.protocols.host.PositionableHost;
 

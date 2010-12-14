@@ -1,4 +1,4 @@
-package agarnet;
+package agarnet.framework;
 
 import java.awt.Dimension;
 import java.util.Observable;

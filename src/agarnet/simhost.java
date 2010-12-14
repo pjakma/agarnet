@@ -1,5 +1,6 @@
 package agarnet;
 
+import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 import agarnet.protocols.host.AnimatableHost;
 
