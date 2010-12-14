@@ -9,8 +9,6 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -23,7 +21,7 @@ import agarnet.framework.Simulation;
 import agarnet.link.link;
 import agarnet.protocols.host.AnimatableHost;
 
-public class anipanel<I, H extends AnimatableHost<Long,H,anipanel.Node>>
+public class anipanel<I, H extends AnimatableHost<Long,H>>
 		extends JPanel
 		implements Observer {
   /**
@@ -33,35 +31,10 @@ public class anipanel<I, H extends AnimatableHost<Long,H,anipanel.Node>>
   Simulation<I,H> s;
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
-  static final Color peer = Color.BLUE.darker ();
-  static final Color seed = Color.BLUE.brighter ().brighter ();
-  static final Color leech = Color.GREEN;
   private boolean mouse_in_panel = false;
   private boolean textlabels = true;
   private int mouse_x;
   private int mouse_y;
-  
-  enum Node {
-    seed, leech, peer;
-    private final static Color colours[] = {
-      Color.CYAN.brighter ().brighter ().brighter (),
-      Color.GREEN,
-      Color.YELLOW,
-    };
-    private static Map<String,Node> peer2node = new HashMap <String,Node> ();
-    static {
-      peer2node.put (agarnet.protocols.peer.peer.class.getName (), peer);
-      peer2node.put (agarnet.protocols.peer.seed.class.getName (), seed);
-      peer2node.put (agarnet.protocols.peer.leech.class.getName (), leech);
-    }
-    public Color colour () {
-      return colours[this.ordinal ()];
-    }
-    public static Node toNode (String name) {
-      Node n = peer2node.get (name);
-      return (n != null) ? n : peer;
-    }
-  }
   
   anipanel (Simulation<I,H> s) {
     this.s = s;
@@ -187,7 +160,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H,anipanel.Node>>
       for (H p : s.network) {
         boolean show_tip = false;
         
-        g.setColor (p.get_type ().colour ());
+        g.setColor (p.colour ());
         
         Point2D pos = p.getPosition ();
         

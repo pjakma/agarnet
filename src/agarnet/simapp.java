@@ -4,14 +4,9 @@ import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
 import java.awt.Dimension;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
-import java.util.Set;
 
 import javax.swing.JFrame;
 
@@ -21,7 +16,6 @@ import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.*;
 import org.nongnu.multigraph.rewire.*;
 
-import agarnet.anipanel.Node;
 import agarnet.framework.AbstractLongSim;
 import agarnet.link.*;
 import agarnet.perturb.RandomMove;
@@ -46,6 +40,7 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
     ul2 = new unilink<simhost> (to, ul1.bandwidth, ul1.latency);
     return new link<simhost> (ul1, ul2);
   }
+  
   /* Java's handling of generic arrays seems less than useful. Rather than
    * restricting up-conversions (i.e. casting foo<specific_type> [] to 
    * foo<Object> [] - which is what leads to problems) they instead decide
@@ -83,7 +78,7 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
     };
   }
   
-  private simhost get_host (anipanel.Node type, boolean movable,
+  private simhost get_host (simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
     simhost s = new simhost (this, type, movable, protos.clone ());
     s.setId (idmap.get (s));
@@ -99,21 +94,21 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
           
       if (conf_leeches.get () < 1
           && r.nextFloat () <= conf_leeches.get ())
-    	p = get_host (anipanel.Node.leech, true, new_protstack_leech ());
+    	p = get_host (simhost.Node.leech, true, new_protstack_leech ());
       else
-        p = get_host (anipanel.Node.peer, true, new_protstack_peer ());
+        p = get_host (simhost.Node.peer, true, new_protstack_peer ());
           
       network.add (p);
     }
       
     if (conf_leeches.get () >= 1) {
       for (int i = 0; i < conf_leeches.get (); i++) {
-        simhost p = get_host (anipanel.Node.leech, true, new_protstack_leech ());
+        simhost p = get_host (simhost.Node.leech, true, new_protstack_leech ());
         network.add (p);
       }
     }
       
-    network.add (get_host (anipanel.Node.seed, false, new_protstack_seed ()));
+    network.add (get_host (simhost.Node.seed, false, new_protstack_seed ()));
   }
   
   final static IntConfigOption conf_peers, conf_runs,
@@ -553,7 +548,7 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
                             new TraversalMetrics.node_test<simhost> () {
                               @Override
                               public boolean test (simhost test) {
-                                return (test.get_type () == Node.leech);
+                                return (test.type == simhost.Node.leech);
                               }
                             }));
     if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {

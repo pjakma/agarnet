@@ -1,18 +1,15 @@
 package agarnet.protocols.host;
 
+import agarnet.framework.Coloured;
 import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 
-public class AnimatableHost<I,N,T> extends PositionableHost<I,N> {
-  private T type;
-  
+public abstract class AnimatableHost<I,N> extends PositionableHost<I,N>
+                                 implements Coloured {
   protected AnimatableHost () {}
-  public AnimatableHost (Simulation<I,N> sim, T type,
+  public AnimatableHost (Simulation<I,N> sim,
                            boolean movable, 
                            protocol<I> [] protocols) {
     super (sim, movable, protocols);
-    this.type = type;
   }
-  
-  public T get_type () { return type; }
 }
