@@ -23,9 +23,8 @@ import agarnet.protocols.protocol_stats.stat;
  * @param <T> The type of a value the simulation uses to quickly between
  *            different kinds of hosts, for the purposes of the simulation.
  */
-public class host<I,N> extends AbstractProtocol<I> 
-                       implements protocol<I> {
-  private protocol<I> [] protocols;
+public class host<I,N> extends AbstractProtocol<I> {
+  protected protocol<I> [] protocols;
   Simulation<I,N> sim;
   
   /* the amount of cpu power left in this tick */;
@@ -171,5 +170,12 @@ public class host<I,N> extends AbstractProtocol<I>
   public void link_update () {
     for (int i = 0; i < protocols.length; i++)
       protocols[i].link_update ();
+  }
+  
+  @SuppressWarnings ("unchecked")
+  public protocol<I> [] protocols () {
+    Object [] newp = new Object [protocols.length];
+    System.arraycopy (protocols, 0, newp, 0, protocols.length);
+    return (protocol<I> []) newp;
   }
 }
