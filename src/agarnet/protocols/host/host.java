@@ -174,8 +174,8 @@ public class host<I,N> extends AbstractProtocol<I> {
   
   @SuppressWarnings ("unchecked")
   public protocol<I> [] protocols () {
-    Object [] newp = new Object [protocols.length];
+    protocol<I> [] newp = new protocol [protocols.length];
     System.arraycopy (protocols, 0, newp, 0, protocols.length);
-    return (protocol<I> []) newp;
+    return newp;
   }
 }
