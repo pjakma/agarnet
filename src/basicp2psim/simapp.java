@@ -653,6 +653,11 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
     return conf_sleep.get ();
   }
   @Override
+  protected boolean get_random_tick () {
+    return false;
+  }
+  
+  @Override
   protected void perturb () {
     if (!((BooleanVar)conf_perturb.subopts.get ("perturb")).get ())
       return;

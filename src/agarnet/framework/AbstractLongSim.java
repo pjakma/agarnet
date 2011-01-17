@@ -94,11 +94,6 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     network.addObserver (this);
   }
   
-  abstract protected int get_runs ();
-  abstract protected void describe_begin ();
-  abstract protected void describe_end ();
-  abstract protected void rewire ();
-  
   final public void main_loop () {    
     doing_network_setup = false;
     int runs = get_runs ();
@@ -151,6 +146,11 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     }
   }
   
+  abstract protected int get_runs ();
+  abstract protected void describe_begin ();
+  abstract protected void describe_end ();
+  abstract protected void rewire ();
+  abstract protected boolean get_random_tick ();
   /**
    * Retrieve the period for the simulation: a granularity of time
    * in simulation ticks within which the simulation is certain to
@@ -186,23 +186,28 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     recent_activity ra_notconverged 
       = new recent_activity (get_period (), false);
     
-    while (ra_link.was_there (true) && ra_notconverged.was_there (false)) {
+    while (ra_link.was_there (true) || ra_notconverged.was_there (false)) {
       /* Links have to be ticked over separately from nodes, otherwise
        * a message might get across multiple nodes and links in just one tick. 
        */
       debug.println ("ticking links");
-      for (H p : network)
+      
+      Iterable<H> nib = this.get_random_tick () ? network.random_node_iterable ()
+                                                : network;
+      
+      for (H p : nib)
         for (Edge<H,link<H>> e : network.edges (p)) {
           /* edges are undirected, but they have a polarity, thanks
            * to to/from aspects of the label. We can use that to ensure
            * we tick a link only from one side, and hence only once.
            */
+          debug.printf ("tick link %s\n", e);
           e.label ().get (p).tick ();
         }
       
       /* now tick the nodes and deliver any messages to them */
       debug.println ("ticking nodes");
-      for (H p : network) {
+      for (H p : nib) {
         p.tick ();
         
         for (Edge<H,link<H>> e : network.edges (p)) {          
@@ -211,6 +216,8 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
           
           if (e.label ().size () > 0)
             setChanged ();
+          
+          debug.printf ("link has data: %s\n", e);
           
           while ((data = e.label ().get (p).poll ()) != null) {
             debug.printf ("Dequeue on link %s\n", e);  
@@ -226,6 +233,10 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       
       ra_link.set (this.hasChanged ());
       ra_notconverged.set (this.has_converged ());
+      
+      debug.printf ("was there? ra_link %s, ra_notconv %s\n",
+                    ra_link.was_there (true),
+                    ra_notconverged.was_there (false));
       
       notifyObservers ();
       
