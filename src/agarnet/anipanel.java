@@ -233,7 +233,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
                       (int)(pos.getY () + noderadius), 
                       (int) noderadius * 2, (int)noderadius * 2);
           g.setColor (Color.red);
-          g.drawString (Integer.toString (Math.round (p.getId ())),
+          g.drawString (Long.toString (p.getId ()),
                         (int)(pos.getX () - (noderadius * 0.75)),
                         (int)(pos.getY () + (noderadius * 2)));
         }
