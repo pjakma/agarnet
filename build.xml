@@ -7,7 +7,7 @@
     <property name="jar.dir"     value="${build.dir}/jar"/>
     <property name="tests.dir"   value="${build.dir}/tests"/>
     <property name="multigraph.jar"   value="${multigraph.dir}/${jar.dir}/MultiGraph.jar"/>
-    <property name="getopt.jar" value="/usr/share/java/gnu-getopt.jar"/>
+    <property name="getopt.jar" value="lib/gnu-getopt.jar"/>
 
     <target name="clean">
         <delete dir="build"/>
