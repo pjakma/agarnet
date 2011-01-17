@@ -2,9 +2,12 @@
 
     <property name="src.dir"     value="src"/>
     <property name="build.dir"   value="build"/>
+    <property name="multigraph.dir"   value="../MultiGraph"/>
     <property name="classes.dir" value="${build.dir}/classes"/>
     <property name="jar.dir"     value="${build.dir}/jar"/>
     <property name="tests.dir"   value="${build.dir}/tests"/>
+    <property name="multigraph.jar"   value="${multigraph.dir}/${jar.dir}/MultiGraph.jar"/>
+    <property name="getopt.jar" value="/usr/share/java/gnu-getopt.jar"/>
 
     <target name="clean">
         <delete dir="build"/>
@@ -12,7 +15,12 @@
 
     <target name="compile">
         <mkdir dir="${classes.dir}"/>
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" source="1.6"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" source="1.6">
+          <classpath>
+            <pathelement location="${multigraph.jar}"/>
+            <pathelement location="${getopt.jar}"/>
+          </classpath>
+        </javac>
     </target>
 
     <target name="jar" depends="compile">
