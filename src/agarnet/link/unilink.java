@@ -81,6 +81,7 @@ public class unilink<I> extends abstract_tickable
     this.latency = latency;
     this.bandwidth = bandwidth;
     _init_linkq ();
+    _sanity_check_buffered ();
   }
   public unilink (I id, int bandwidth, int latency) {
     _sanity_check_args (id, bandwidth, latency, Integer.MAX_VALUE);
@@ -92,6 +93,37 @@ public class unilink<I> extends abstract_tickable
     _init_linkq ();
   }
   
+
+  private int _bytes_in_queue (Queue<byte []> q) {
+    int bytes = 0;
+    for (byte [] ba : q)
+      bytes += ba.length;
+    return bytes;
+  }
+  
+  private int _bytes_in_linkq () {
+    int linkqsize = 0;
+    for (Queue<byte []> q : linkq)
+      linkqsize += _bytes_in_queue (q);
+    return linkqsize;
+  }
+  
+  private void _sanity_check_buffered () {
+    if (!debug.applies ())
+      return;
+    
+    int linkqsize = _bytes_in_linkq ();
+    int rxbytes = _bytes_in_queue (rxbuf),
+        txbytes = _bytes_in_queue (txbuf);
+    
+    if (linkqsize + rxbytes + txbytes != buffered)
+      throw new AssertionError ("buffered doesn't add up: "
+                                    + linkqsize + " + "
+                                    + txbuf + " + "
+                                    + rxbuf + " != "
+                                    + buffered);
+  }
+  
   /*** Queue methods ***
    * 
    * NB, we don't implement the Queue i'face cause it drags in all the
@@ -101,6 +133,8 @@ public class unilink<I> extends abstract_tickable
     if (data.length + buffered > capacity)
       return false;
     
+    _sanity_check_buffered ();
+    
     /* XXX: need to ensure data is <= bandwidth for a tick and we need
      * ability to split it up if too big.
      */
@@ -108,8 +142,10 @@ public class unilink<I> extends abstract_tickable
       buffered += data.length;
       debug.printf ("%s, enq. msg %s, len %d (buf: %d)\n",
                    this, data, data.length, buffered);
+      _sanity_check_buffered ();
       return true;
     }
+    _sanity_check_buffered ();
     return false;
   }
   
@@ -118,6 +154,8 @@ public class unilink<I> extends abstract_tickable
   }
   
   public byte [] poll () {
+    _sanity_check_buffered ();
+    
     byte [] data = rxbuf.poll ();
     
     if (data != null) {
@@ -126,22 +164,29 @@ public class unilink<I> extends abstract_tickable
                     this, data, data.length, buffered);
     }
     
+    _sanity_check_buffered ();
+    
     return data;
   }
   
   @Override
   public void reset () {
+    _sanity_check_buffered ();
     txbuf.clear ();
     rxbuf.clear ();
     buffered = 0;
+    _sanity_check_buffered ();
   }
   
   public int size () {
+    _sanity_check_buffered ();
     return buffered;
   }
   
   private void linkq_to_rx () {
     Queue<byte []> l;
+    
+    _sanity_check_buffered ();
     
     /* dequeue from the latency linkq onto the rxbuf */
     if ((l = linkq[qhead]) != null) {
@@ -149,9 +194,12 @@ public class unilink<I> extends abstract_tickable
       while ((data = l.poll ()) != null)
         rxbuf.offer (data);
     }
+    _sanity_check_buffered ();
   }
   
   private void tx_to_linkq () {
+    _sanity_check_buffered ();
+    
     byte [] data = txbuf.poll ();
     Queue<byte []> l = linkq[qhead];
     int bytes = 0;
@@ -168,23 +216,32 @@ public class unilink<I> extends abstract_tickable
     l.add (data);
     linkq[qhead] = l;
     
+    _sanity_check_buffered ();
+    
     /* Now see if we can fit in more */
     while ((data = txbuf.poll ()) != null 
            && bytes + data.length <= bandwidth) {
       l.add (data);
       bytes += data.length;
     }
+    
+    _sanity_check_buffered ();
   }
   
-  public void tick () {    
+  public void tick () {
+    _sanity_check_buffered ();
+    
     linkq_to_rx ();    
     tx_to_linkq ();
     
     qhead++;
     qhead %= linkq.length;
+    
+    _sanity_check_buffered ();
   }
   
   public String toString () {
+    _sanity_check_buffered ();
     return "ul: " + id.toString () + " bw/lat/buf: " + bandwidth + "/" + latency
            + "/" + buffered;
   }
