@@ -1,5 +1,11 @@
 package agarnet.protocols;
 
+import java.io.IOException;
+
+import org.nongnu.multigraph.debug;
+
+import agarnet.data.marshall;
+
 public abstract class AbstractProtocol<N>
                 implements protocol<N>, protocol_stats {
   protected protocol<N> above;
@@ -80,5 +86,41 @@ public abstract class AbstractProtocol<N>
   }
   protected  void setChanged () {
     changed = true;
+  }
+  
+  @Override
+  public void down (N dst, byte [] data) {
+    throw new UnsupportedOperationException (
+              "application protocol doesn't accept messsages from above");
+  }
+  
+  /**
+   * Convenience function for protocol implementations: Serialise the
+   * given object and send it to the destination.
+   * @param to Destination node
+   * @param msg Message object to serialise and send.
+   */
+  protected void send (N to, Object msg) {
+    byte [] data;
+    try {
+      data = marshall.serialise (msg);
+    } catch (IOException e) {
+      debug.println ("Weird, couldn't serialise message!");
+      e.printStackTrace();
+      return;
+    }
+    send (to, data);
+  }
+  
+  /**
+   * Convenience function for protocol implementations. Send
+   * the given packet to the destination, incrementing the
+   * sent packets statistics.
+   * @param to
+   * @param data
+   */
+  protected void send (N to, byte [] data) {
+    below.down (to, data);
+    stats_inc (stat.sent);
   }
 }

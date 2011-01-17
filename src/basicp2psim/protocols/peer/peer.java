@@ -1,6 +1,5 @@
 package basicp2psim.protocols.peer;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,13 +54,6 @@ public class peer<I,N> extends AbstractProtocol<I>
     return true;
   }
   
-
-  public void down (I dst, byte [] data) {
-    throw new UnsupportedOperationException (
-        "application protocol doesn't accept messsages from above");
-  }
-  
-  
   @Override
   public void insert (protocol<I> above, protocol<I> below) {
     if (above != null)
@@ -105,11 +97,11 @@ public class peer<I,N> extends AbstractProtocol<I>
       if (!to.equals (from) && should_send (to, f)) {
         debug.printf ("peer %s: forward %s from %s to %s\n",
                       this, f, from, to);
-        send (to, f, data);
+        send (to, data);
       }
     
     /* Acknowledge receipt to the sender by flooding back */
-    send (from, f, data);
+    send (from, data);
   }
   
   @Override
@@ -124,7 +116,7 @@ public class peer<I,N> extends AbstractProtocol<I>
     return msgdb.contains (msg);
   }
   
-  public void send (file msg) {
+  protected void send (file msg) {
     if (should_store (msg))
       msgdb.add (msg);
     
@@ -150,30 +142,11 @@ public class peer<I,N> extends AbstractProtocol<I>
     if (!db.contains (msg))
       db.add (msg);
   }
-  /* convenience method, primarily so we don't have to re-serialise 
-   * messages we already had the byte [] data for
-   */
-  private void send (I to, file msg, byte [] data) {
-    below.down (to, data);
-    stats_inc (stat.sent);
+  protected void send (I to, file msg) {    
+    debug.printf ("peer %s: send %s to %s\n", this, msg, to);
+    send (to, (Object) msg);
   }
   
-  public void send (I to, file msg) {
-    byte [] data;
-    
-    debug.printf ("peer %s: send %s to %s\n", this, msg, to);
-    
-    try {
-      data = marshall.serialise (msg);
-    } catch (IOException e) {
-      debug.println ("Weird, couldn't serialise message!");
-      e.printStackTrace();
-      return;
-    }
-    
-    send (to, msg, data);
-  }
-
   @Override
   public void link_update () {
     Set<I> newconnected = sim.connected (selfId);
