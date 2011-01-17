@@ -191,8 +191,9 @@ public class unilink<I> extends abstract_tickable
     /* dequeue from the latency linkq onto the rxbuf */
     if ((l = linkq[qhead]) != null) {
       byte [] data;
-      while ((data = l.poll ()) != null)
-        rxbuf.offer (data);
+      while ((data = l.peek ()) != null)
+        if (rxbuf.offer (data))
+          l.poll ();
     }
     _sanity_check_buffered ();
   }
@@ -218,11 +219,12 @@ public class unilink<I> extends abstract_tickable
     
     _sanity_check_buffered ();
     
-    /* Now see if we can fit in more */
-    while ((data = txbuf.poll ()) != null 
+    /* Now see if we can fit in more, without losing anything */
+    while ((data = txbuf.peek ()) != null
            && bytes + data.length <= bandwidth) {
       l.add (data);
       bytes += data.length;
+      txbuf.poll ();
     }
     
     _sanity_check_buffered ();
