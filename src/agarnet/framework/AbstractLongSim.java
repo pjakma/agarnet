@@ -111,7 +111,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       }
       
       rewire ();
-            
+      
       describe_begin ();
       
       long start = System.currentTimeMillis ();
@@ -217,7 +217,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
           if (e.label ().size () > 0)
             setChanged ();
           
-          debug.printf ("link has data: %s\n", e);
+          debug.printf (" check link: %s\n", e);
           
           while ((data = e.label ().get (p).poll ()) != null) {
             debug.printf ("Dequeue on link %s\n", e);  
