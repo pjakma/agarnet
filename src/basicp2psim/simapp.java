@@ -22,7 +22,7 @@ import basicp2psim.protocols.peer.seed;
 
 
 import agarnet.anipanel;
-import agarnet.framework.AbstractLongSim;
+import agarnet.framework.AbstractCliApp;
 import agarnet.link.*;
 import agarnet.perturb.RandomMove;
 import agarnet.protocols.*;
@@ -30,7 +30,7 @@ import agarnet.variables.*;
 import agarnet.variables.atoms.*;
 
 
-public class simapp extends AbstractLongSim<simhost> implements Observer {  
+public class simapp extends AbstractCliApp<simhost> implements Observer {  
   private Random r = new Random ();
   private anipanel<Long, simhost> ap;
   private RandomMove<simhost,link<simhost>> moverewire = null;
@@ -230,7 +230,14 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
           
           put ("ScaleFree", new ObjectVar [] {
               new BooleanVar (
-                "ScaleFree", "Barabas/Albert scale-free model topology")
+                "ScaleFree", "Barabas/Albert scale-free model topology"),
+              new StringVar (
+                "m_mode", "Mode of the m-parameter," +
+                          " 'strict' (default), 'min' or 'max'"),
+              new IntVar ("m", "Links to add on each step",
+                         1, Integer.MAX_VALUE),
+              new IntVar ("a", "Additive bump to new nodes being likely to get linked",
+                          0, Integer.MAX_VALUE),
           });
         }}).parse ("ScaleFree"),
     conf_layout = new LayoutConfigOption (
@@ -410,7 +417,7 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
           conf_perturb.parse (g.getOptarg ());
           break;
         case 'd':
-          debug.level = debug.levels.DEBUG;
+          debug.level (debug.levels.DEBUG);
           conf_debug.set (true);
           break;
         case 'g':
@@ -483,9 +490,21 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
                                                         "mindegree")).get ())
                                                         .rewire ();
     } else if (tconf.get ().equals ("ScaleFree")) {
-      new ScaleFreeRewire<simhost, link<simhost>> (network,
-                                                   default_edge_labeler)
-                                                   .rewire ();
+      IntVar m = (IntVar)tconf.subopts.get ("ScaleFree","m");
+      IntVar a = (IntVar)tconf.subopts.get ("ScaleFree","a");
+      StringVar m_mode = (StringVar)tconf.subopts.get ("ScaleFree", "m_mode");
+      
+      ScaleFreeRewire<simhost, link<simhost>> sfr
+        = new ScaleFreeRewire<simhost, link<simhost>> (network,
+                                                       default_edge_labeler);
+      if (m.isSet ())
+        sfr.m (m.get ());
+      if (m_mode.isSet ())
+        sfr.m_mode (m_mode.get ());
+      if (a.isSet ())
+        sfr.a (a.get ());
+      
+      sfr.rewire ();
     } else if (tconf.get ().equals ("Lattice")) {
       new LatticeRewire<simhost, link<simhost>> (network, default_edge_labeler)
                                                              .rewire ();
@@ -505,7 +524,7 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
       p.setMass (network.nodal_outdegree (p));
     
     if (conf_gui.get ())
-      layout ();
+      initial_layout ();
     
     setChanged ();
     
@@ -568,54 +587,61 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
       System.out.println (count++ + ": " + val);
   }
   
-  private void layout () {
+  /* Layout related.
+   * 
+   * initial_layout lays out the graph prior to the running of the simulation.
+   * further, incremental layout per tick of the simulation, can still be 
+   * done via the perturb () call.
+   */
+  private Layout<simhost,link<simhost>> configured_layout;
+  
+  private void initial_layout () {
     int maxiterations = (conf_layout.get ().equals ("Force")
-                      ? ((IntVar)conf_layout.subopts
-                                    .get ("Force", "maxiterations")).get ()
-                      : 10);
-    Layout<simhost,link<simhost>> l
-      = Layout.factory (conf_layout.get (), network,
+        ? ((IntVar)conf_layout.subopts
+                      .get ("Force", "maxiterations")).get ()
+        : 10);
+    if (configured_layout == null) {
+      configured_layout = Layout.factory (conf_layout.get (), network,
                   new Dimension (model_size.width - (int)(2 * ap.noderadius ()),
                                  model_size.height - (int)(2 * ap.noderadius ())),
                                  maxiterations);
     
-    if (l instanceof ForceLayout<?,?>) {      
-      ForceLayout<simhost, link<simhost>> fl
-         = (ForceLayout<simhost, link<simhost>>) l;
-      /* If Java had a decent pre-processor I'd use defines for these
-       * constants. It's not worth maintaining an enum for, and its
-       * not worth further complexity.
-       * 
-       * A Map would be ideal, but you can't use initialisers with
-       * maps. sigh.
-       */
-      for (String bkey : conf_layout.subopts.subopt_keys ("Force")) {
-        FloatVar fval;
-        ObjectVar v = conf_layout.subopts.get ("Force", bkey);
-        
-        if (!(v instanceof FloatVar))
-          continue;
-        
-        if (!v.isSet ())
-          continue;
-        
-        fval = (FloatVar) v;
-        
-        if (bkey.equals ("C"))
-          fl.setC (fval.get ());
-        if (bkey.equals ("mintemp"))
-          fl.setMintemp (fval.get ());
-        if (bkey.equals ("minkve"))
-          fl.setMinkve (fval.get ());
-        if (bkey.equals ("jiggle"))
-          fl.setJiggle (fval.get ());
+      if (configured_layout instanceof ForceLayout<?,?>) {      
+        ForceLayout<simhost, link<simhost>> fl
+           = (ForceLayout<simhost, link<simhost>>) configured_layout;
+        /* If Java had a decent pre-processor I'd use defines for these
+         * constants. It's not worth maintaining an enum for, and its
+         * not worth further complexity.
+         * 
+         * A Map would be ideal, but you can't use initialisers with
+         * maps. sigh.
+         */
+        for (String bkey : conf_layout.subopts.subopt_keys ("Force")) {
+          FloatVar fval;
+          ObjectVar v = conf_layout.subopts.get ("Force", bkey);
+          
+          if (!(v instanceof FloatVar))
+            continue;
+          
+          if (!v.isSet ())
+            continue;
+          
+          fval = (FloatVar) v;
+          
+          if (bkey.equals ("C"))
+            fl.setC (fval.get ());
+          if (bkey.equals ("mintemp"))
+            fl.setMintemp (fval.get ());
+          if (bkey.equals ("minkve"))
+            fl.setMinkve (fval.get ());
+          if (bkey.equals ("jiggle"))
+            fl.setJiggle (fval.get ());
+        }
       }
     }
-    
-    /* graph layout */
-    while (l.layout (1)) {
-      setChanged ();
-      notifyObservers ();
+    while (layout ()) {
+      if (!conf_gui.get ())
+        continue;
       
       try {
         Thread.sleep (50);
@@ -623,6 +649,35 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
         e.printStackTrace();
       }
     }
+    configured_layout.maxiterations (0);
+    
+    /* ForceLayout can continue to perturb position of nodes, if we wish.
+     * Setup a daemon thread to run alongside the main thread, and graphics
+     */
+    if (conf_gui.get () && configured_layout instanceof ForceLayout) {
+      Thread t = new Thread () {
+
+        @Override
+        public void run () {
+          while (true) {
+            try {
+              Thread.sleep (50);
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+            layout ();
+          }
+        }
+      };
+      t.setDaemon (true);
+      t.start ();
+    }
+  }
+  private boolean layout () {
+    debug.println ("layout..");
+    setChanged ();
+    notifyObservers ();
+    return configured_layout.layout (1);
   }
   
   protected boolean has_converged () {
@@ -659,11 +714,9 @@ public class simapp extends AbstractLongSim<simhost> implements Observer {
   
   @Override
   protected void perturb () {
-    if (!((BooleanVar)conf_perturb.subopts.get ("perturb")).get ())
-      return;
-   
-    moverewire.rewire ();
-    layout ();
-    setChanged ();
+    if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
+      moverewire.rewire ();
+      setChanged ();
+    }
   }
 }
