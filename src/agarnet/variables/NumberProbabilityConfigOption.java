@@ -1,6 +1,5 @@
 package agarnet.variables;
 
-import agarnet.variables.atoms.FloatVar;
 import agarnet.variables.atoms.NumberProbVar;
 
 /* ConfigurableOption wrapper around NumeberProb */

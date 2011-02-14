@@ -39,7 +39,8 @@ public class SuboptConfigOption extends ConfigurableOption {
   }
   
   public SuboptConfigOption parse (String args) {
-    _parse (args);
+    if (args != null)
+      _parse (args);
     return this;
   }
   

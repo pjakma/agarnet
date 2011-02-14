@@ -1,11 +1,6 @@
 package agarnet.variables;
 
-import java.util.HashMap;
-
 import org.nongnu.multigraph.layout.Layout;
-
-import agarnet.Subopt;
-import agarnet.variables.atoms.*;
 
 /* Parameters for layout algorithms.
  * 
