@@ -1,4 +1,7 @@
 package agarnet.variables;
+import java.util.ArrayList;
+import java.util.List;
+
 import gnu.getopt.LongOpt;
 import agarnet.Subopt;
 import agarnet.variables.atoms.*;
@@ -63,11 +66,38 @@ public abstract class ConfigurableOption {
   
   /**
    * Return an option string suitable GNU Getopt
+   * @param cvars A List of ConfigureVariable objects, for which to
+   *              construct the getopt() option string.
+   * @return An option description string suitable for GNU getopt.
+   */
+  public static String get_optstring (List<ConfigurableOption> cvars) {
+    StringBuilder sb = new StringBuilder ();
+    
+    for (ConfigurableOption cv : cvars) {
+      sb.append ((char) cv.lopt.getVal ());
+      
+      switch (cv.lopt.getHasArg ()) {
+        case LongOpt.OPTIONAL_ARGUMENT:
+          sb.append ("::");
+          break;
+        case LongOpt.REQUIRED_ARGUMENT:
+          sb.append (':');
+          break;
+      }
+    }
+    return sb.toString ();
+  }
+  /**
+   * Return an option string suitable GNU Getopt
    * @param cvars An array of ConfigureVariable objects, for which to
    *              construct the getopt() option string.
    * @return An option description string suitable for GNU getopt.
    */
   public static String get_optstring (ConfigurableOption [] cvars) {
+    /* This should remain identical to the List version.
+     * They can't be consolidated without needless copying,
+     * it seems.
+     */
     StringBuilder sb = new StringBuilder ();
     
     for (ConfigurableOption cv : cvars) {
