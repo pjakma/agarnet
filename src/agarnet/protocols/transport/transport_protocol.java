@@ -138,13 +138,13 @@ public class transport_protocol<I,N,L>
   }
   
   private void _update_spf () {
-    debug.levels origlevel = debug.level;
-    debug.level = debug.levels.ERROR;
+    debug.levels origlevel = debug.level ();
+    debug.level (debug.levels.ERROR);
     
     if (selfId != null)
       spf.run (sim.id2node (selfId));
     
-    debug.level = origlevel;
+    debug.level (origlevel);
   }
   
   @Override
