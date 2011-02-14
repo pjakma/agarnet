@@ -1,0 +1,530 @@
+package agarnet.framework;
+
+import gnu.getopt.LongOpt;
+
+import java.awt.Dimension;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+
+import org.nongnu.multigraph.Edge;
+import org.nongnu.multigraph.debug;
+import org.nongnu.multigraph.layout.ForceLayout;
+import org.nongnu.multigraph.layout.Layout;
+import org.nongnu.multigraph.metrics.TraversalMetrics;
+import org.nongnu.multigraph.rewire.CartesianRewire;
+import org.nongnu.multigraph.rewire.EdgeLabeler;
+import org.nongnu.multigraph.rewire.LatticeRewire;
+import org.nongnu.multigraph.rewire.RandomRewire;
+import org.nongnu.multigraph.rewire.ScaleFreeRewire;
+
+import agarnet.anipanel;
+import agarnet.link.*;
+import agarnet.protocols.host.AnimatableHost;
+import agarnet.variables.*;
+import agarnet.variables.atoms.*;
+
+/**
+ * An abstract parent class containing common functionality for a command-line interface
+ * simulation interface, with optional GUI visualisation. @see basicp2psim.simap for an
+ * example concrete application.
+ * 
+ * @author paul
+ *
+ * @param <H> The simulation host type.
+ */
+public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
+                extends AbstractLongSim<H> {
+  /* Force layout can be re-used while the sim runs */
+  protected Random r = new Random ();
+  protected anipanel<Long, H> ap;
+
+  protected link<H> _gen_link (H from, H to, int maxbandwidth,
+                                     int maxlatency) {
+    unilink<H> ul1, ul2;
+    ul1 = new unilink<H> (from, 1 + r.nextInt (maxbandwidth),
+                                         1 + r.nextInt (maxlatency));
+    ul2 = new unilink<H> (to, ul1.bandwidth, ul1.latency);
+    return new link<H> (ul1, ul2);
+  }
+  
+  /* Configuration option description & state variables */
+  protected static final IntConfigOption conf_period = new IntConfigOption (
+      "period", 'P', "<number>",
+      "Period for repeating behaviour of certain objects, like seeds",
+      LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
+      .set (5);
+  
+  protected static final IntConfigOption conf_runs = new IntConfigOption ("runs", 'r', "<runs>",
+      "# of simulation runs to make."
+          + " Edges are rewired, nodes reset.",
+      LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
+      .set (1);
+  
+  protected static final IntConfigOption conf_sleep = new IntConfigOption (
+      "sleep", 's', "<sleep>",
+      "period or amount of time to sleep between ticks of the simulation",
+      LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
+      .set (1000);
+  
+  protected static final DimensionConfigOption conf_model_size = new DimensionConfigOption (
+      "model-size", 'M', "<width>x<height>",
+      "width and height of the simulation model",
+      LongOpt.REQUIRED_ARGUMENT).set (new Dimension (1200, 800));
+  
+  /*Eclipse insists the following cast is required.. Absolutely bizarre 
+   * The standard javac compiler is fine without the cast.
+   * Bizarre bug in the internal java compiler of Eclipse it seems.
+   */
+  protected static final TopologyConfigOption conf_topology
+    = (TopologyConfigOption) new TopologyConfigOption (
+      "topology", 't', "<topology>[,<topology specific options>]",
+      "topology of graph, i.e. how nodes are linked together",
+      LongOpt.REQUIRED_ARGUMENT,
+      new ConfigOptionSet () {{
+        put ("Cartesian", new ObjectVar [] {
+            new BooleanVar (
+              "Cartesian", "Nodes linked to those other nodes which are" +
+                           " within range."),
+            new FloatVar ("range",
+               "distance within which nodes are in range of each other")
+              .set (200),
+        });
+        
+        put ("Lattice", new ObjectVar [] {
+            new BooleanVar (
+              "Lattice", "Lattice / grid topology"),
+        });
+        
+        put ("Random", new ObjectVar [] {
+            new BooleanVar (
+              "Random", "Randomly connected topology"),
+            new IntVar ("mindegree", "Minimum out degree for nodes",
+                        0, Integer.MAX_VALUE).set (3),
+        });
+        
+        put ("ScaleFree", new ObjectVar [] {
+            new BooleanVar (
+              "ScaleFree", "Barabas/Albert scale-free model topology"),
+            new StringVar (
+              "m_mode", "Mode of the m-parameter," +
+                        " 'strict' (default), 'min' or 'max'"),
+            new IntVar ("m", "Links to add on each step",
+                       1, Integer.MAX_VALUE),
+            new IntVar ("a", "Additive bump to new nodes being likely to get linked",
+                        0, Integer.MAX_VALUE),
+        });
+      }}).parse ("ScaleFree");
+  
+  protected static final LayoutConfigOption conf_layout = new LayoutConfigOption (
+    "layout", 'l', "<layout>[,<layout specific options>]",
+    "algorithm to use to layout the graph for visualisation",
+    LongOpt.REQUIRED_ARGUMENT,
+    new ConfigOptionSet () {{
+      put (new IntVar (
+           "maxiterations",
+           "restrict algorithm to given max. iterations",
+           1, Integer.MAX_VALUE)
+           .set (120));
+      put ("Force", new ObjectVar [] {
+             new BooleanVar (
+               "Force", "Fruchterman-Rheingold force-directed layout"),
+             new FloatVar (
+               "C", "scalar applied to the k constant of the algorithm"),
+             new FloatVar (
+               "decay", "decay constant to apply to energy"),
+             new FloatVar (
+               "mintemp","Minimum temperature algorithm can decay to",
+               0, Float.MAX_VALUE),
+             new FloatVar (
+               "minkve","Stop algorithm when kinetic energy goes below " +
+                        "this value",
+               0, Float.MAX_VALUE),
+             new FloatVar (
+               "jiggle","Scalar for a noise factor to add to algorithm",
+               0, Float.MAX_VALUE)
+      });
+          
+      put ("Null", new ObjectVar [] {
+           new BooleanVar ("Null", "Null layout"),
+      });
+          
+      put ("Radial", new ObjectVar [] {
+           new BooleanVar ("Radial", "Lay nodes out radially"),
+      });
+          
+      put ("Random", new ObjectVar [] {
+           new BooleanVar (
+             "Random","randomly placed within the model dimension"),
+      });
+          
+  }}).parse ("Force");
+  
+  protected static final DebugConfigOption conf_debug = new DebugConfigOption (
+    "debug", 'd', "[<debug sub-options>]",
+    "Enable debugging and configure debug-history",
+    LongOpt.OPTIONAL_ARGUMENT,
+    new ConfigOptionSet () {{
+      put (new BooleanVar ("debug", "Enable/Disable debugging"));
+      put (new StringVar (
+           "level",
+           "Debug level to set, defaults to ALL").set ("debug"));
+      put (new StringVar (
+           "pushlevel",
+           "Buffer debug and only push when message of this level is logged"));
+  }});
+  
+  /* booleans */
+  protected static final BooleanConfigOption conf_gui
+    = new BooleanConfigOption (
+        "gui", 'g',
+        "enable the GUI/visualisation").set (false);
+  protected final static BooleanConfigOption conf_random_tick
+    = new BooleanConfigOption (
+        "randomtick", 'R',
+        "tick nodes & edges in randomised order").set (false);
+  /* List of all the desired configuration options */
+  protected static final List<ConfigurableOption> confvars
+    = new ArrayList<ConfigurableOption> (Arrays.asList (
+    /* ints */  conf_period, conf_runs, conf_sleep,
+    /* bools */ conf_debug, conf_gui, conf_random_tick,
+    conf_model_size,
+    conf_topology,
+    conf_layout));
+  
+  protected static void usage (String s) {
+    if (s != null)
+      System.out.println ("Error: " + s);
+    
+    String indent = "    ";
+    StringBuilder sb = new StringBuilder ();
+    sb.append ("Usage: java simapp\n");
+    for (ConfigurableOption cv : confvars) {
+      sb.append (indent);
+      sb.append ("[-"); sb.append ((char) cv.lopt.getVal ());
+      sb.append ("|--"); sb.append (cv.lopt.getName ());
+      sb.append (" "); sb.append (cv.arg_desc);
+      sb.append ("]\n");
+    }
+    sb.append (
+        "\nProbability is specified either as a number, 0 <= x < 1, or as x%");
+    sb.append ("\n");
+    for (ConfigurableOption cv : confvars) {
+      sb.append (indent); sb.append (cv.lopt.getName ());
+      sb.append (": "); sb.append (cv.help);
+      sb.append ("\n");
+      
+      if (cv.subopts != null) {
+        boolean first = true;
+        for (String branchkey : cv.subopts.branch_keys ()) {
+          if (first) {
+            sb.append (indent);
+            sb.append ("  "); sb.append (cv.lopt.getName ());
+            sb.append (" sub-options:\n");
+          }
+          
+          sb.append (indent);
+          sb.append ("   ");
+          sb.append (branchkey);
+          sb.append (": ");
+          sb.append (cv.subopts.get (branchkey, branchkey).getDesc ());
+          sb.append ("\n");
+          
+          for (String suboptkey : cv.subopts.subopt_keys (branchkey)) {
+            ObjectVar ov = cv.subopts.get (branchkey, suboptkey);
+            
+            if (suboptkey.equals (branchkey))
+              continue;
+            
+            sb.append (indent);
+            sb.append ("     ");
+            
+            sb.append (ov.getName ());
+            sb.append (": ");
+            sb.append (ov.getDesc ());
+            sb.append ("\n");
+          }
+          first = false;
+        }
+  
+        for (String subopt : cv.subopts.subopt_keys ()) {
+          ObjectVar ov = cv.subopts.get (subopt);
+          sb.append (indent);
+          sb.append ("  ");
+          sb.append (ov.getName ());
+          sb.append (": ");
+          sb.append (ov.getDesc ());
+          sb.append ("\n");
+        }
+      }
+      sb.append ("\n");
+    }
+    System.out.println (sb);
+    System.exit (1);
+  }
+
+  protected static void dump_arg_state () {
+    if (debug.applies ()) {
+      for (ConfigurableOption cv : confvars) {
+        debug.println (cv.toString ());
+        
+        if (cv.subopts != null)
+          for (String bkey : cv.subopts.branch_keys ()) {
+            //debug.println (cv.subopts[i].toString ());
+            
+            for (String subkey : cv.subopts.subopt_keys (bkey)) {
+              ObjectVar ov = cv.subopts.get (bkey, subkey);
+              
+              if (ov.isSet ())
+                debug.println (ov.toString ());
+              else
+                debug.println (ov.getName () + " not set");
+            }
+          }
+      }
+    }
+  }
+  
+  protected EdgeLabeler<H, link<H>> default_edge_labeler
+    = new EdgeLabeler<H, link<H>> () {
+        public link<H> getLabel (H from, H to) {
+              return _gen_link (from, to, 100, 3);
+            }
+    };
+
+  public AbstractCliApp (Dimension d) {
+    super (d);
+  }
+  
+  private Layout<H,link<H>> configured_layout;
+  protected void initial_layout () {
+    int maxiterations = (conf_layout.get ().equals ("Force")
+        ? ((IntVar)conf_layout.subopts
+                      .get ("Force", "maxiterations")).get ()
+        : 10);
+    if (configured_layout == null) {
+      configured_layout = Layout.factory (conf_layout.get (), network,
+                  new Dimension (model_size.width - (int)(2 * ap.noderadius ()),
+                                 model_size.height - (int)(2 * ap.noderadius ())),
+                                 maxiterations);
+    
+      if (configured_layout instanceof ForceLayout<?,?>) {      
+        ForceLayout<H, link<H>> fl
+           = (ForceLayout<H, link<H>>) configured_layout;
+        /* If Java had a decent pre-processor I'd use defines for these
+         * constants. It's not worth maintaining an enum for, and its
+         * not worth further complexity.
+         * 
+         * A Map would be ideal, but you can't use initialisers with
+         * maps. sigh.
+         */
+        for (String bkey : conf_layout.subopts.subopt_keys ("Force")) {
+          FloatVar fval;
+          ObjectVar v = conf_layout.subopts.get ("Force", bkey);
+          
+          if (!(v instanceof FloatVar))
+            continue;
+          
+          if (!v.isSet ())
+            continue;
+          
+          fval = (FloatVar) v;
+          
+          if (bkey.equals ("C"))
+            fl.setC (fval.get ());
+          if (bkey.equals ("mintemp"))
+            fl.setMintemp (fval.get ());
+          if (bkey.equals ("minkve"))
+            fl.setMinkve (fval.get ());
+          if (bkey.equals ("jiggle"))
+            fl.setJiggle (fval.get ());
+        }
+      }
+    }
+    while (layout ()) {
+      if (!conf_gui.get ())
+        continue;
+      
+      try {
+        Thread.sleep (50);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    configured_layout.maxiterations (0);
+    
+    /* ForceLayout can continue to perturb position of nodes, if we wish.
+     * Setup a daemon thread to run alongside the main thread, and graphics
+     */
+    if (conf_gui.get () && configured_layout instanceof ForceLayout) {
+      Thread t = new Thread () {
+  
+        @Override
+        public void run () {
+          while (true) {
+            try {
+              Thread.sleep (50);
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+            layout ();
+          }
+        }
+      };
+      t.setDaemon (true);
+      t.start ();
+    }
+  }
+
+  protected boolean layout () {
+    debug.println ("layout..");
+    setChanged ();
+    notifyObservers ();
+    return configured_layout.layout (1);
+  }
+
+  @Override
+  protected int get_runs () {
+    return conf_runs.get ();
+  }
+
+  @Override
+  protected int get_period () {
+    return conf_period.get ();
+  }
+
+  @Override
+  protected int get_sleep () {
+    return conf_sleep.get ();
+  }
+
+  @Override
+  protected boolean get_random_tick () {
+    return conf_random_tick.get ();
+  }
+  
+  protected void rewire_update_hosts () {
+    /* set the mass according to the degree, useful for things like
+     * Force-Directed Layout.
+     */
+    for (H p : network)
+      p.setMass (network.nodal_outdegree (p));
+  }
+  
+  protected void rewire () {
+    TopologyConfigOption tconf = conf_topology;
+    
+    /* Wire up the graph in some fashion */ 
+    if (tconf.get ().equals ("Random")) {
+      new RandomRewire<H, link<H>> (network, default_edge_labeler,
+                            ((IntVar)tconf.subopts.get ("Random",
+                                                        "mindegree")).get ())
+                                                        .rewire ();
+    } else if (tconf.get ().equals ("ScaleFree")) {
+      IntVar m = (IntVar)tconf.subopts.get ("ScaleFree","m");
+      IntVar a = (IntVar)tconf.subopts.get ("ScaleFree","a");
+      StringVar m_mode = (StringVar)tconf.subopts.get ("ScaleFree", "m_mode");
+      
+      ScaleFreeRewire<H, link<H>> sfr
+        = new ScaleFreeRewire<H, link<H>> (network, default_edge_labeler);
+      if (m.isSet ())
+        sfr.m (m.get ());
+      if (m_mode.isSet ())
+        sfr.m_mode (m_mode.get ());
+      if (a.isSet ())
+        sfr.a (a.get ());
+      
+      sfr.rewire ();
+    } else if (tconf.get ().equals ("Lattice")) {
+      new LatticeRewire<H, link<H>> (network, default_edge_labeler)
+                                                             .rewire ();
+    } else if (tconf.get ().equals ("Cartesian")) {
+      Layout.factory ("Random", network, model_size, 10).layout (1);
+      new CartesianRewire<H, link<H>> (network, default_edge_labeler,
+                          ((FloatVar) tconf.subopts.get ("Cartesian",
+                                                        "range")).get ())
+                                                        .rewire ();
+    }
+    
+    rewire_update_hosts ();
+    
+    if (conf_gui.get ())
+      initial_layout ();
+    
+    setChanged ();
+  }
+  
+  private void describe_links () {
+    System.out.println ("links:");
+    for (H h : network) {
+      for (Edge<H,link<H>> e: network.edges (h))
+        debug.println (e.label ().get (h).toString ());
+    }
+  }
+
+  protected void setup_debug () {
+    /* NB: Be careful to avoid marshalling strings to pass to debug statements
+     * otherwise you may take a good bit of the cost for the debug, even
+     * when not enabled.
+     * 
+     * I.e. let the debug class do the marshalling via format statements.
+     */
+    if (conf_debug.subopts.get ("debug").isSet ()) {
+      StringVar level = ((StringVar)conf_debug.subopts.get ("level"));
+      System.out.printf ("got level %s\n", level.get ());
+      debug.level (level.get ());
+      StringVar pl = ((StringVar)conf_debug.subopts.get ("pushlevel"));
+      if (pl.isSet ())
+        debug.pushlevel (pl.get ());
+    }
+    
+    System.out.printf ("debug level: %s, pushlevel %s\n",
+                       debug.level ().name (),
+                       debug.pushlevel ().name ());
+  }
+
+  protected void describe_begin () {
+    setup_debug ();
+    
+    debug.printf ("Network: %s\n", network);
+    debug.printf ("idmap:\n%s", idmap);
+    
+    System.out.println ("\nGraph stats");
+    System.out.println ("Nodes: " + network.size ());
+    System.out.println ("Average degree: " + network.avg_nodal_degree ());
+    System.out.println ("Max degree: " + network.max_nodal_degree ());
+    System.out.println ("Type: " + conf_topology.get ());
+    System.out.println ("Period: " + conf_period.get ());
+    
+    if (debug.applies ()) {
+      debug.println ("Distribution: ");
+      int count = 0;
+      for (int val : TraversalMetrics.degree_distribution (network))
+        debug.println (count++ + ": " + val);
+    }
+  }
+  
+  protected void describe_end () {
+    if (debug.applies ())
+      describe_links ();
+    
+    System.out.println ("Disconnected: "
+                        + TraversalMetrics.count (network,
+                          new TraversalMetrics.node_test<H> () {
+                            @Override
+                            public boolean test (H test) {
+                              return (test.getSize () == 0);
+                          }}));
+
+    System.out.println ("Messages Sent: " + sim_stats.get_messages_sent ());
+    System.out.println ("Converged: " + has_converged ());
+    System.out.println ("Ticks: " + sim_stats.get_ticks ());
+    System.out.println ("Memory: " + Runtime.getRuntime ().totalMemory ()
+                        + " " + (Runtime.getRuntime ().totalMemory () >> 20)
+                        + " MiB");
+    
+    /* this obviously must come last - for ease of parsing multiple runs */
+    System.out.println ("End stats");
+  }
+}
