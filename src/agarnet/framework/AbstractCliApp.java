@@ -10,14 +10,9 @@ import java.util.Random;
 
 import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.debug;
-import org.nongnu.multigraph.layout.ForceLayout;
-import org.nongnu.multigraph.layout.Layout;
+import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.TraversalMetrics;
-import org.nongnu.multigraph.rewire.CartesianRewire;
-import org.nongnu.multigraph.rewire.EdgeLabeler;
-import org.nongnu.multigraph.rewire.LatticeRewire;
-import org.nongnu.multigraph.rewire.RandomRewire;
-import org.nongnu.multigraph.rewire.ScaleFreeRewire;
+import org.nongnu.multigraph.rewire.*;
 
 import agarnet.anipanel;
 import agarnet.link.*;
@@ -115,6 +110,20 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
             new IntVar ("a", "Additive bump to new nodes being likely to get linked",
                         0, Integer.MAX_VALUE),
         });
+        
+        put ("MultiClassScaleFree", new ObjectVar [] {
+            new BooleanVar (
+              "MultiClassScaleFree", "Barabas/Albert multi-class variant"),
+            new StringVar (
+              "m_mode", "Mode of the m-parameter," +
+                        " 'strict' (default), 'min' or 'max'"),
+            new IntVar ("m", "Links to add on each step",
+                       1, Integer.MAX_VALUE),
+            new IntVar ("a", "Additive bump to new nodes being likely to get linked",
+                        0, Integer.MAX_VALUE),
+            new IntVar ("p", "Links to add between similar nodes on each step",
+                        0, Integer.MAX_VALUE),
+        });
       }}).parse ("ScaleFree");
   
   protected static final LayoutConfigOption conf_layout = new LayoutConfigOption (
@@ -169,7 +178,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
       put (new BooleanVar ("debug", "Enable/Disable debugging"));
       put (new StringVar (
            "level",
-           "Debug level to set, defaults to ALL").set ("debug"));
+           "Debug level to set, defaults to ALL").set ("DEBUG"));
       put (new StringVar (
            "pushlevel",
            "Buffer debug and only push when message of this level is logged"));
@@ -180,15 +189,20 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     = new BooleanConfigOption (
         "gui", 'g',
         "enable the GUI/visualisation").set (false);
+  protected static final BooleanConfigOption conf_degrees
+  = new BooleanConfigOption (
+      "degrees", 'D',
+      "print out the final degree distribution of nodes").set (false);
   protected final static BooleanConfigOption conf_random_tick
     = new BooleanConfigOption (
         "randomtick", 'R',
         "tick nodes & edges in randomised order").set (false);
+  
   /* List of all the desired configuration options */
   protected static final List<ConfigurableOption> confvars
     = new ArrayList<ConfigurableOption> (Arrays.asList (
     /* ints */  conf_period, conf_runs, conf_sleep,
-    /* bools */ conf_debug, conf_gui, conf_random_tick,
+    /* bools */ conf_debug, conf_gui, conf_random_tick, conf_degrees,
     conf_model_size,
     conf_topology,
     conf_layout));
@@ -414,39 +428,36 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
   
   protected void rewire () {
     TopologyConfigOption tconf = conf_topology;
+    String alg = tconf.get ();
     
-    /* Wire up the graph in some fashion */ 
-    if (tconf.get ().equals ("Random")) {
-      new RandomRewire<H, link<H>> (network, default_edge_labeler,
-                            ((IntVar)tconf.subopts.get ("Random",
-                                                        "mindegree")).get ())
-                                                        .rewire ();
-    } else if (tconf.get ().equals ("ScaleFree")) {
-      IntVar m = (IntVar)tconf.subopts.get ("ScaleFree","m");
-      IntVar a = (IntVar)tconf.subopts.get ("ScaleFree","a");
-      StringVar m_mode = (StringVar)tconf.subopts.get ("ScaleFree", "m_mode");
+    /* Wire up the graph in some fashion */
+    Rewire<H,link<H>> rw = Rewire.factory (alg, network, default_edge_labeler);
+    
+    if (rw instanceof ScaleFreeRewire<?,?>) {
+      IntVar m = (IntVar)tconf.subopts.get (alg,"m");
+      IntVar a = (IntVar)tconf.subopts.get (alg,"a");
+      StringVar m_mode = (StringVar)tconf.subopts.get (alg, "m_mode");
+      ScaleFreeRewire<H,link<H>> sfr = (ScaleFreeRewire<H, link<H>>) rw;
       
-      ScaleFreeRewire<H, link<H>> sfr
-        = new ScaleFreeRewire<H, link<H>> (network, default_edge_labeler);
       if (m.isSet ())
         sfr.m (m.get ());
       if (m_mode.isSet ())
         sfr.m_mode (m_mode.get ());
       if (a.isSet ())
         sfr.a (a.get ());
-      
-      sfr.rewire ();
-    } else if (tconf.get ().equals ("Lattice")) {
-      new LatticeRewire<H, link<H>> (network, default_edge_labeler)
-                                                             .rewire ();
-    } else if (tconf.get ().equals ("Cartesian")) {
+    } else if (rw instanceof CartesianRewire<?,?>) {
       Layout.factory ("Random", network, model_size, 10).layout (1);
-      new CartesianRewire<H, link<H>> (network, default_edge_labeler,
-                          ((FloatVar) tconf.subopts.get ("Cartesian",
-                                                        "range")).get ())
-                                                        .rewire ();
     }
     
+    if (rw instanceof MultiClassScaleFreeRewire<?,?>) {
+      MultiClassScaleFreeRewire<H,link<H>> mcsfr
+        = (MultiClassScaleFreeRewire<H, link<H>>) rw;
+      IntVar p = (IntVar)tconf.subopts.get (alg,"p");
+      if (p.isSet ())
+        mcsfr.p (p.get ());
+    }
+    
+    rw.rewire ();
     rewire_update_hosts ();
     
     if (conf_gui.get ())
@@ -472,16 +483,16 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
      */
     if (conf_debug.subopts.get ("debug").isSet ()) {
       StringVar level = ((StringVar)conf_debug.subopts.get ("level"));
-      System.out.printf ("got level %s\n", level.get ());
       debug.level (level.get ());
+      
       StringVar pl = ((StringVar)conf_debug.subopts.get ("pushlevel"));
       if (pl.isSet ())
         debug.pushlevel (pl.get ());
     }
     
-    System.out.printf ("debug level: %s, pushlevel %s\n",
+    /*System.out.printf ("debug level: %s, pushlevel %s\n",
                        debug.level ().name (),
-                       debug.pushlevel ().name ());
+                       debug.pushlevel ().name ());*/
   }
 
   protected void describe_begin () {
@@ -497,11 +508,14 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     System.out.println ("Type: " + conf_topology.get ());
     System.out.println ("Period: " + conf_period.get ());
     
-    if (debug.applies ()) {
-      debug.println ("Distribution: ");
+    if (conf_degrees.get ()) {
+      System.out.println ("Distribution: ");
       int count = 0;
-      for (int val : TraversalMetrics.degree_distribution (network))
-        debug.println (count++ + ": " + val);
+      for (int val : TraversalMetrics.degree_distribution (network)) {
+        if (val > 0)
+          System.out.println ("degree: " + count + " number: " + val);
+        count++;
+      }
     }
   }
   

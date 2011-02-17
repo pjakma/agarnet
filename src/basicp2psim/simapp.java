@@ -192,6 +192,9 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
         db.set (true);
         conf_debug.parse (g.getOptarg ());
           break;
+        case 'D':
+          conf_degrees.set (true);
+          break;
         case 'g':
           conf_gui.set (true);
           break;

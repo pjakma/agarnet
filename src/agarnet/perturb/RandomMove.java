@@ -7,7 +7,7 @@ import org.nongnu.multigraph.Graph;
 import org.nongnu.multigraph.debug;
 import org.nongnu.multigraph.layout.PositionableNode;
 import org.nongnu.multigraph.layout.Vector2D;
-import org.nongnu.multigraph.rewire.AbstractRewire;
+import org.nongnu.multigraph.rewire.Rewire;
 import org.nongnu.multigraph.rewire.CartesianRewire;
 import org.nongnu.multigraph.rewire.EdgeLabeler;
 
@@ -20,7 +20,7 @@ import org.nongnu.multigraph.rewire.EdgeLabeler;
  * @param <L>
  */
 public class RandomMove<N extends PositionableNode,L>
-       extends AbstractRewire<N,L> {
+       extends Rewire<N,L> {
   private final CartesianRewire<N,L> cl;
   private final Dimension bound;
   private final float default_speed;
