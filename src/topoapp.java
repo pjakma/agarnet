@@ -161,12 +161,10 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
     s.describe_begin ();
     System.out.printf ("Runtime: %.3f seconds\n", (float)(fin - start) / 1000);
     s.describe_end ();
-    System.out.println ("Adjacency matrix:");
-    AdjacencyMatrix.sparse (System.out, s.network);
-  }
-  
-  protected void describe_begin () {
-    super.describe_begin ();
+    if (conf_adjmatrix.get ()) {
+      System.out.println ("Adjacency matrix:");
+      AdjacencyMatrix.sparse (System.out, s.network);
+    }
   }
   
   protected boolean has_converged () {

@@ -517,6 +517,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
           System.out.println ("degree: " + count + " number: " + val);
         count++;
       }
+      count = 0;
+      for (float val : TraversalMetrics.norm_degree_distribution (network)) {
+        if (val > 0)
+          System.out.println ("P(degree): " + count + " number: " + val);
+        count++;
+      }
     }
   }
   
