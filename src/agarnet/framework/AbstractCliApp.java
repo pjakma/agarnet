@@ -503,6 +503,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     
     System.out.println ("\nGraph stats");
     System.out.println ("Nodes: " + network.size ());
+    System.out.println ("Edges: " + TraversalMetrics.edges (network));
     System.out.println ("Average degree: " + network.avg_nodal_degree ());
     System.out.println ("Max degree: " + network.max_nodal_degree ());
     System.out.println ("Type: " + conf_topology.get ());

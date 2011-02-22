@@ -197,10 +197,6 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       
       for (H p : nib)
         for (Edge<H,link<H>> e : network.edges (p)) {
-          /* edges are undirected, but they have a polarity, thanks
-           * to to/from aspects of the label. We can use that to ensure
-           * we tick a link only from one side, and hence only once.
-           */
           debug.printf ("tick link %s\n", e);
           e.label ().get (p).tick ();
         }
