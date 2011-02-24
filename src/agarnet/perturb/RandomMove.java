@@ -9,7 +9,7 @@ import org.nongnu.multigraph.layout.PositionableNode;
 import org.nongnu.multigraph.layout.Vector2D;
 import org.nongnu.multigraph.rewire.Rewire;
 import org.nongnu.multigraph.rewire.CartesianRewire;
-import org.nongnu.multigraph.rewire.EdgeLabeler;
+import org.nongnu.multigraph.EdgeLabeler;
 
 /**
  * A mash-up rewiring class which emulates a mobile network, by moving nodes

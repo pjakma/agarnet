@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.nongnu.multigraph.Edge;
+import org.nongnu.multigraph.EdgeLabeler;
 import org.nongnu.multigraph.debug;
 import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.TraversalMetrics;
@@ -176,12 +177,22 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     LongOpt.OPTIONAL_ARGUMENT,
     new ConfigOptionSet () {{
       put (new BooleanVar ("debug", "Enable/Disable debugging"));
+      put (new BooleanVar ("invert", "Invert sense of any class/method/msg filter."));
       put (new StringVar (
            "level",
            "Debug level to set, defaults to ALL").set ("DEBUG"));
       put (new StringVar (
            "pushlevel",
-           "Buffer debug and only push when message of this level is logged"));
+           "Ring-buffer messages, only pushing when this level is logged"));
+      put (new StringVar (
+          "classfilter",
+          "Filter log messages by source class, using given regex"));
+      put (new StringVar (
+          "methodfilter",
+          "Filter log messages by source method, using given regex"));
+      put (new StringVar (
+          "msgfilter",
+          "Filter log messages by content, using given regex"));
   }});
   
   /* booleans */
@@ -309,6 +320,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
 
   public AbstractCliApp (Dimension d) {
     super (d);
+    setup_debug ();
   }
   
   private Layout<H,link<H>> configured_layout;
@@ -488,6 +500,22 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
       StringVar pl = ((StringVar)conf_debug.subopts.get ("pushlevel"));
       if (pl.isSet ())
         debug.pushlevel (pl.get ());
+      
+      StringVar cf = ((StringVar)conf_debug.subopts.get ("classfilter"));
+      if (cf.isSet ())
+        debug.classfilter (cf.get ());
+      
+      StringVar mf = ((StringVar)conf_debug.subopts.get ("methodfilter"));
+      if (mf.isSet ())
+        debug.methodfilter (mf.get ());
+      
+      StringVar msgf = ((StringVar)conf_debug.subopts.get ("msgfilter"));
+      if (msgf.isSet ())
+        debug.msgfilter (msgf.get ());
+      
+      if (conf_debug.subopts.get ("invert").isSet ())
+        debug.invert (true);
+      
     }
     
     /*System.out.printf ("debug level: %s, pushlevel %s\n",
@@ -496,8 +524,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
   }
 
   protected void describe_begin () {
-    setup_debug ();
-    
     debug.printf ("Network: %s\n", network);
     debug.printf ("idmap:\n%s", idmap);
     

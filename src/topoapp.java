@@ -109,8 +109,8 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
         case 'd':
           BooleanVar db
           = ((BooleanVar)conf_debug.subopts.get ("debug"));
-        db.set (true);
-        conf_debug.parse (g.getOptarg ());
+          db.set (true);
+          conf_debug.parse (g.getOptarg ());
           break;
         case 'D':
           conf_degrees.set (true);
@@ -139,7 +139,7 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
     dump_arg_state ();
     
     topoapp s = new topoapp (conf_model_size.get ());
-    
+        
     JFrame jf = null;
     if (conf_gui.get ()) {
       s.ap = new anipanel<Long,simhost> (s);
