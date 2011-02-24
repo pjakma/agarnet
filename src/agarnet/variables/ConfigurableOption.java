@@ -1,5 +1,4 @@
 package agarnet.variables;
-import java.util.ArrayList;
 import java.util.List;
 
 import gnu.getopt.LongOpt;
