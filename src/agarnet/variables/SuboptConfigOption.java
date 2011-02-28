@@ -25,11 +25,6 @@ public class SuboptConfigOption extends ConfigurableOption {
     primary = subopt.optionp;
     
     if (ret >= 0) {
-      if (subopts.num_subopts (subopt.optionp) == 1
-          && subopt.valuep != null)
-        throw new IllegalArgumentException (
-            subopt.valuep + " does not take further sub-options");
-      
       if (subopts.branch_keys ().contains (subopt.optionp))
         parse_subopts (subopts, subopt.optionp, args);
       else
