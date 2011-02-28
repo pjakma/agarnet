@@ -76,17 +76,22 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     s.setId (idmap.get (s));
     return s;
   }
+  protected simhost get_host () {
+    return get_host (simhost.Node.peer, true, new_protstack_peer ());
+  }
   
   public simapp (Dimension d) {
     super (d);
-    
+  }
+  
+  protected void add_initial_hosts () {
     /* create a network */
     for (int i = 0; i < conf_peers.get (); i++) {
       simhost p; 
           
       if (conf_leeches.get () < 1
           && r.nextFloat () <= conf_leeches.get ())
-    	p = get_host (simhost.Node.leech, true, new_protstack_leech ());
+        p = get_host (simhost.Node.leech, true, new_protstack_leech ());
       else
         p = get_host (simhost.Node.peer, true, new_protstack_peer ());
           
@@ -242,7 +247,7 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     
     if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
       s.moverewire = new RandomMove<simhost,link<simhost>> (
-                      s.network, s.default_edge_labeler, s.model_size,
+                      s.network, s.default_edge_labeler (), s.model_size,
                       ((FloatVar) conf_perturb.subopts.get ("speed")).get (),
                       ((IntVar) conf_perturb.subopts.get ("maxrange")).get ());
     }

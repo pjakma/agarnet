@@ -3,13 +3,17 @@ package agarnet.framework;
 import gnu.getopt.LongOpt;
 
 import java.awt.Dimension;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import org.nongnu.multigraph.AdjacencyMatrix;
 import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.EdgeLabeler;
+import org.nongnu.multigraph.NodeLabeler;
 import org.nongnu.multigraph.debug;
 import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.TraversalMetrics;
@@ -79,6 +83,10 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
       "topology of graph, i.e. how nodes are linked together",
       LongOpt.REQUIRED_ARGUMENT,
       new ConfigOptionSet () {{
+        put ("File", new StringVar ("File",
+                                    "Read in an adjacency-matrix to use"
+                                    + " as the topology"
+        ));
         put ("Cartesian", new ObjectVar [] {
             new BooleanVar (
               "Cartesian", "Nodes linked to those other nodes which are" +
@@ -311,13 +319,35 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     }
   }
   
-  protected EdgeLabeler<H, link<H>> default_edge_labeler
-    = new EdgeLabeler<H, link<H>> () {
+  /* callback interface to label a new edge */
+  private EdgeLabeler<H, link<H>> _default_edge_labeler =
+    new EdgeLabeler<H, link<H>> () {
         public link<H> getLabel (H from, H to) {
               return _gen_link (from, to, 100, 3);
             }
     };
-
+  protected EdgeLabeler<H, link<H>> default_edge_labeler () {
+    return _default_edge_labeler;
+  }
+  
+  /* callback to retrieve a host for the given string label */
+  private NodeLabeler<H, link<H>> _node_labeller = 
+    new NodeLabeler<H, link<H>> () {
+      @Override
+      public H getNode (String node) {
+        H sh;
+        if ((sh = id2node (node)) != null)
+          return sh;
+        
+        return get_host ();
+      }
+  };
+  protected NodeLabeler<H, link<H>> default_node_labeler () {
+    return _node_labeller;
+  }
+  
+  protected abstract H get_host ();
+  
   public AbstractCliApp (Dimension d) {
     super (d);
     setup_debug ();
@@ -438,12 +468,10 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
       p.setMass (network.nodal_outdegree (p));
   }
   
-  protected void rewire () {
-    TopologyConfigOption tconf = conf_topology;
-    String alg = tconf.get ();
-    
+  /* rewire according to some algorithm */
+  private void rewire_alg (TopologyConfigOption tconf, String alg) {
     /* Wire up the graph in some fashion */
-    Rewire<H,link<H>> rw = Rewire.factory (alg, network, default_edge_labeler);
+    Rewire<H,link<H>> rw = Rewire.factory (alg, network, default_edge_labeler ());
     
     if (rw instanceof ScaleFreeRewire<?,?>) {
       IntVar m = (IntVar)tconf.subopts.get (alg,"m");
@@ -457,7 +485,9 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
         sfr.m_mode (m_mode.get ());
       if (a.isSet ())
         sfr.a (a.get ());
-    } else if (rw instanceof CartesianRewire<?,?>) {
+    }
+    
+    if (rw instanceof CartesianRewire<?,?>) {
       Layout.factory ("Random", network, model_size, 10).layout (1);
     }
     
@@ -470,12 +500,50 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     }
     
     rw.rewire ();
+  }
+  
+  /* rewire the graph from a file input of topology */
+  private void rewire_file (TopologyConfigOption tconf) {
+    String fname = ((StringVar)tconf.subopts.get (tconf.get (), "File")).get ();
+    
+    try {
+      AdjacencyMatrix.parse (new FileInputStream (fname),
+                             network, 
+                             default_node_labeler (),
+                             default_edge_labeler ());
+    } catch (FileNotFoundException e) {
+      System.out.println ("Unable to open " + fname);
+      System.exit (1);
+    }
+  }
+  
+  protected void rewire () {
+    TopologyConfigOption tconf = conf_topology;
+    String type = tconf.get ();
+    
+    if (type.equals ("File"))
+      rewire_file (tconf);
+    else
+      rewire_alg (tconf, type);
+    
     rewire_update_hosts ();
     
     if (conf_gui.get ())
       initial_layout ();
     
     setChanged ();
+  }
+  
+  abstract protected void add_initial_hosts ();
+  
+  protected void initial_setup () {
+    /* adjacency-matrix file? Then its done on each rewire */
+    if (conf_topology.get ().equals ("File"))
+      return;
+    /* otherwise, hosts may need to be created initially,
+     * delegate to child.
+     */
+    add_initial_hosts ();
   }
   
   private void describe_links () {

@@ -88,6 +88,18 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   public H id2node (Long l) {
     return idmap.get (l);
   }
+  public H id2node (String sl) {
+    long l;
+    
+    try {
+      l = Long.parseLong (sl);
+    } catch (NumberFormatException e) {
+      debug.println ("Invalid host identifier: " + sl);
+      return null;
+    }
+    
+    return id2node (l);
+  }
   
   public AbstractLongSim (Dimension d) {
     super (new SimpleGraph<H,link<H>> (), d);
@@ -97,6 +109,8 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   final public void main_loop () {    
     doing_network_setup = false;
     int runs = get_runs ();
+    
+    initial_setup ();
     
     for (int i = 0; i < runs; i++) {
       System.out.println ("# starting run " + i);
@@ -151,6 +165,8 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   abstract protected void describe_end ();
   abstract protected void rewire ();
   abstract protected boolean get_random_tick ();
+  abstract protected void initial_setup ();
+  
   /**
    * Retrieve the period for the simulation: a granularity of time
    * in simulation ticks within which the simulation is certain to

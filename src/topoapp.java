@@ -12,18 +12,13 @@ import javax.swing.JFrame;
 import org.nongnu.multigraph.*;
 
 import org.nongnu.multigraph.layout.*;
-import org.nongnu.multigraph.metrics.*;
 
 import basicp2psim.simhost;
-import basicp2psim.protocols.peer.leech;
 import basicp2psim.protocols.peer.peer;
-import basicp2psim.protocols.peer.seed;
-
 
 import agarnet.anipanel;
 import agarnet.framework.AbstractCliApp;
 import agarnet.link.*;
-import agarnet.perturb.RandomMove;
 import agarnet.protocols.*;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
@@ -43,15 +38,23 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
     };
   }
   
+  
   private simhost get_host (simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
     simhost s = new simhost (this, type, movable, protos.clone ());
     s.setId (idmap.get (s));
     return s;
   }
+  /* default get_host */
+  protected simhost get_host () {
+    return get_host (simhost.Node.peer, true, new_protstack_peer ());
+  }
   
   public topoapp (Dimension d) {
     super (d);
+  }
+  
+  protected void add_initial_hosts () {
     
     /* create a network */
     for (int i = 0; i < conf_nodes.get (); i++) {
