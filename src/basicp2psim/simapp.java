@@ -212,6 +212,9 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
         case 'r':
           conf_runs.parse (g.getOptarg ());
           break;
+        case 'T':
+          conf_path_stats.set (true);
+          break;
         case 'R':
           conf_random_tick.set (true);
           break;

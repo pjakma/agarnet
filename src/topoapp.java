@@ -127,6 +127,9 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
         case 'l':
           conf_layout.parse (g.getOptarg ());
           break;
+        case 'T':
+          conf_path_stats.set (true);
+          break;
         case 'R':
           conf_random_tick.set (true);
           break;
@@ -170,6 +173,7 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
     }
   }
   
+  @Override
   protected boolean has_converged () {
     float f = 0;
     

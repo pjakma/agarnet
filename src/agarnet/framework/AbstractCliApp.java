@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.nongnu.multigraph.AdjacencyMatrix;
@@ -17,6 +18,7 @@ import org.nongnu.multigraph.NodeLabeler;
 import org.nongnu.multigraph.debug;
 import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.TraversalMetrics;
+import org.nongnu.multigraph.metrics.dmap;
 import org.nongnu.multigraph.rewire.*;
 
 import agarnet.anipanel;
@@ -216,12 +218,17 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     = new BooleanConfigOption (
         "randomtick", 'R',
         "tick nodes & edges in randomised order").set (false);
+  protected static final BooleanConfigOption conf_path_stats
+  = new BooleanConfigOption (
+      "path-stats", 'T',
+      "Print out stats on paths (expensive)").set (false);
   
   /* List of all the desired configuration options */
   protected static final List<ConfigurableOption> confvars
     = new ArrayList<ConfigurableOption> (Arrays.asList (
     /* ints */  conf_period, conf_runs, conf_sleep,
     /* bools */ conf_debug, conf_gui, conf_random_tick, conf_degrees,
+                conf_path_stats,
     conf_model_size,
     conf_topology,
     conf_layout));
@@ -620,6 +627,18 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     }
   }
   
+  /* path related statistics */
+  private void describe_paths () {
+    Map<String,Double> stats = TraversalMetrics.stats (network);
+    
+    System.out.println ("Path max: " + stats.get ("max").intValue ());
+    System.out.printf ("Path average: %.3f\n", stats.get ("avg"));
+    System.out.printf ("Path stddev: %.4f\n", stats.get ("stddev"));
+    System.out.printf ("Path stderr: %.4f\n", stats.get ("stderr"));
+    System.out.println ("Radius: " + stats.get ("radius").intValue ());
+    System.out.println ("Diameter: " + stats.get ("diameter").intValue ());
+  }
+  
   protected void describe_end () {
     if (debug.applies ())
       describe_links ();
@@ -638,6 +657,8 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     System.out.println ("Memory: " + Runtime.getRuntime ().totalMemory ()
                         + " " + (Runtime.getRuntime ().totalMemory () >> 20)
                         + " MiB");
+    if (conf_path_stats.get ())
+      describe_paths ();
     
     /* this obviously must come last - for ease of parsing multiple runs */
     System.out.println ("End stats");
