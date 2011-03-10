@@ -158,6 +158,7 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
       jf.setVisible (true);
     }
     /* Use random as initial layout */
+    s.add_initial_hosts ();
     Layout.factory ("Random", s.network, s.model_size, 10).layout (1);
     
     long start = System.currentTimeMillis ();
