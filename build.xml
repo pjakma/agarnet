@@ -19,6 +19,7 @@
         <javac srcdir="${src.dir}" destdir="${classes.dir}" source="1.6">
           <classpath>
             <pathelement location="${multigraph.jar}"/>
+            <pathelement location="${agarnet.jar}"/>
             <pathelement location="${getopt.jar}"/>
           </classpath>
         </javac>
