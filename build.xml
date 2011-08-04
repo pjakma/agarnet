@@ -1,12 +1,13 @@
-<project name="agarnet" default="compile">
+<project name="kcoresim" default="compile">
 
     <property name="src.dir"     value="src"/>
     <property name="build.dir"   value="build"/>
     <property name="multigraph.dir"   value="../MultiGraph"/>
+    <property name="agarnet.dir"   value="../agarnet"/>
     <property name="classes.dir" value="${build.dir}/classes"/>
-    <property name="jar.dir"     value="${build.dir}/jar"/>
     <property name="tests.dir"   value="${build.dir}/tests"/>
     <property name="multigraph.jar"   value="${multigraph.dir}/${jar.dir}/MultiGraph.jar"/>
+    <property name="agarnet.jar"   value="${agarnet.dir}/${jar.dir}/agarnet.jar"/>
     <property name="getopt.jar" value="lib/gnu-getopt.jar"/>
 
     <target name="clean">
@@ -21,14 +22,5 @@
             <pathelement location="${getopt.jar}"/>
           </classpath>
         </javac>
-    </target>
-
-    <target name="jar" depends="compile">
-        <mkdir dir="${jar.dir}"/>
-        <jar destfile="${jar.dir}/agarnet.jar" basedir="${classes.dir}">
-            <manifest>
-                <attribute name="Main-Class" value=""/>
-            </manifest>
-        </jar>
     </target>
 </project>
