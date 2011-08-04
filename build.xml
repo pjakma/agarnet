@@ -3,7 +3,8 @@
     <property name="src.dir"     value="src"/>
     <property name="build.dir"   value="build"/>
     <property name="multigraph.dir"   value="../MultiGraph"/>
-    <property name="agarnet.dir"   value="../agarnet"/>
+    <property name="agarnet.dir" value="../agarnet"/>
+    <property name="jar.dir"     value="${build.dir}/jar"/>
     <property name="classes.dir" value="${build.dir}/classes"/>
     <property name="tests.dir"   value="${build.dir}/tests"/>
     <property name="multigraph.jar"   value="${multigraph.dir}/${jar.dir}/MultiGraph.jar"/>
