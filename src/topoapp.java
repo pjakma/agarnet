@@ -67,11 +67,6 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
   }
   
   /* topo simulation specific variables */
-  static final BooleanConfigOption conf_adjmatrix
-    = new BooleanConfigOption (
-        "adj-matrix", 'a',
-        "print adjacency-matrix").set (false);
-  
   final static IntConfigOption conf_nodes
     = new IntConfigOption (
         "nodes", 'n', "<number>",
@@ -155,7 +150,7 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
       jf = new JFrame ();
       jf.add (s.ap);
       jf.pack ();
-      jf.setTitle ("P2P Simulation/Model");
+      jf.setTitle ("Topology");
       jf.setDefaultCloseOperation (javax.swing.WindowConstants.EXIT_ON_CLOSE);
       jf.setSize (1000, 1000 * s.model_size.height/s.model_size.width);
       jf.setVisible (true);

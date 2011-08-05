@@ -228,7 +228,11 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     = new BooleanConfigOption (
       "kshell-stats", 'K',
       "Print out stats on k-shells").set (false);
-  
+  protected static final BooleanConfigOption conf_adjmatrix
+    = new BooleanConfigOption (
+        "adj-matrix", 'a',
+        "print adjacency-matrix").set (false);
+
   /* List of all the desired configuration options */
   protected static final List<ConfigurableOption> confvars
     = new ArrayList<ConfigurableOption> (Arrays.asList (
