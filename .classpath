@@ -2,7 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry exported="true" kind="lib" path="/usr/share/java/gnu-getopt.jar">
+	<classpathentry exported="true" kind="lib" path="/usr/share/java/gnu-getopt.jar" sourcepath="/home/paul/Downloads/java-getopt-1.0.13.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="file:/usr/share/javadoc/gnu-getopt-1.0.12/index.html"/>
 		</attributes>
