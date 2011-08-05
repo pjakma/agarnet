@@ -4,6 +4,9 @@ import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.nongnu.multigraph.structure.kshell_node;
+import org.nongnu.multigraph.structure.kshell_node_data;
+
 import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 import agarnet.protocols.host.AnimatableHost;
@@ -14,7 +17,8 @@ import agarnet.protocols.host.AnimatableHost;
  * 
  * Basically, this is what Java makes you do to get typedefs.
  */
-public class simhost extends AnimatableHost<Long, simhost> {
+public class simhost extends AnimatableHost<Long, simhost>
+                     implements kshell_node {
   private static final long serialVersionUID = -7814606266303045281L;
   public final Node type;
   
@@ -50,5 +54,11 @@ public class simhost extends AnimatableHost<Long, simhost> {
   @Override
   public Color colour () {
     return type.colour ();
+  }
+  
+  private final kshell_node_data gkc = new kshell_node_data ();
+  @Override
+  public kshell_node_data gkc () {
+    return gkc;
   }
 }

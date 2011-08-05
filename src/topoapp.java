@@ -124,6 +124,9 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
         case 't':
           conf_topology.parse (g.getOptarg ());
           break;
+        case 'K':
+          conf_kshell_stats.set (true);
+          break;
         case 'l':
           conf_layout.parse (g.getOptarg ());
           break;

@@ -20,6 +20,8 @@ import org.nongnu.multigraph.layout.*;
 import org.nongnu.multigraph.metrics.TraversalMetrics;
 import org.nongnu.multigraph.metrics.dmap;
 import org.nongnu.multigraph.rewire.*;
+import org.nongnu.multigraph.structure.kshell;
+import org.nongnu.multigraph.structure.kshell_node;
 
 import agarnet.anipanel;
 import agarnet.link.*;
@@ -36,7 +38,7 @@ import agarnet.variables.atoms.*;
  *
  * @param <H> The simulation host type.
  */
-public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
+public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_node>
                 extends AbstractLongSim<H> {
   /* Force layout can be re-used while the sim runs */
   protected Random r = new Random ();
@@ -222,13 +224,17 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
   = new BooleanConfigOption (
       "path-stats", 'T',
       "Print out stats on paths (expensive)").set (false);
+  protected static final BooleanConfigOption conf_kshell_stats
+    = new BooleanConfigOption (
+      "kshell-stats", 'K',
+      "Print out stats on k-shells").set (false);
   
   /* List of all the desired configuration options */
   protected static final List<ConfigurableOption> confvars
     = new ArrayList<ConfigurableOption> (Arrays.asList (
     /* ints */  conf_period, conf_runs, conf_sleep,
     /* bools */ conf_debug, conf_gui, conf_random_tick, conf_degrees,
-                conf_path_stats,
+                conf_path_stats, conf_kshell_stats,
     conf_model_size,
     conf_topology,
     conf_layout));
@@ -627,6 +633,22 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
     }
   }
   
+  /* k-shell related stats */
+  private void describe_kshells () {
+    int maxk = kshell.calc (network);
+    int count[] = new int [maxk];
+    
+    //debug.println (debug.levels.ERROR, "trigger..");
+    
+    for (H h : network) {
+      if (maxk > 0)
+        count[h.gkc().k]++;
+    }
+    for (int i = 0; i < count.length; i++) {
+      System.out.printf ("shell %2d : %d nodes\n", i, count[i]);
+    }
+  }
+  
   /* path related statistics */
   private void describe_paths () {
     Map<String,Double> stats = TraversalMetrics.stats (network);
@@ -659,6 +681,8 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H>>
                         + " MiB");
     if (conf_path_stats.get ())
       describe_paths ();
+    if (conf_kshell_stats.get ())
+      describe_kshells ();
     
     /* this obviously must come last - for ease of parsing multiple runs */
     System.out.println ("End stats");
