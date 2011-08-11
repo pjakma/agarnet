@@ -10,6 +10,7 @@ public class PositionableHost<I,N> extends AbstractPositionableNode
                                    implements protocol<I> {
   protected host<I,N> host;
   private boolean movable = true;
+  protected Simulation<I,N> sim;
   
   protected PositionableHost () {}
   public PositionableHost (Simulation<I,N> sim,
@@ -17,6 +18,7 @@ public class PositionableHost<I,N> extends AbstractPositionableNode
                            protocol<I> [] protocols) {
     this.host = new host<I,N> (sim, protocols);
     this.movable = movable;
+    this.sim = sim;
   }
   
   public void reset () {
