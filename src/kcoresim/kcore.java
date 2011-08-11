@@ -1,5 +1,6 @@
 package kcoresim;
 
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
   /* The generation of the algorithm, and
    * the ID of the gen setter.
    */
-  Long generation;
+  long generation;
   boolean genupdated;
   
   /* Last received message from neighbour */
@@ -46,8 +47,8 @@ public class kcore<N> extends AbstractProtocol<Long> {
     generation++;
     genupdated = true;
   }
-  private void generation_update (Long gen) {
-    if (genupdated)
+  private void generation_update (long gen) {
+    if (gen < generation)
       return;
     
     generation = gen;
@@ -56,7 +57,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
   
   boolean generation_check (neighbour_msg m) {
     if (m.gen > generation) {
-      generation = m.gen;
+      generation_update (m.gen);
       return true;
     }
     return false;
@@ -182,7 +183,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
       return;
     }
         
-    if (m.srcid.intValue () != src.longValue ()) {
+    if (m.srcid != src.longValue ()) {
       debug.printf (debug.levels.ERROR,
                     "up: blah src %d doesn't match packet Id %d!\n",
                     src, m.srcid);
@@ -194,7 +195,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
     
     generation_check (m);
     
-    debug.printf ("up: received %d from %d\n", m.kbound, src);
+    debug.printf ("up: received %s from %d\n", m, src);
     
     if (kbound () || genupdated)
       broadcast (kbound);

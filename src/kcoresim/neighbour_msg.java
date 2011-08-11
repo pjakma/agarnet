@@ -4,11 +4,11 @@ import java.io.Serializable;
 
 class neighbour_msg implements Serializable {
   private static final long serialVersionUID = 1L;
-  final Long srcid;
-  final Long gen;
+  final long srcid;
+  final long gen;
   final int kbound;
   
-  neighbour_msg (Long srcid, Long gen, int kbound) {
+  neighbour_msg (long srcid, long gen, int kbound) {
     this.srcid = srcid;
     this.gen = gen;
     this.kbound = kbound;

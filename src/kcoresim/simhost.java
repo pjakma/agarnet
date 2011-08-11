@@ -19,27 +19,22 @@ import agarnet.protocols.host.AnimatableHost;
 public class simhost extends AnimatableHost<Long, simhost>
                      implements kshell_node {
   private int maxdegree;
-  private int numnodes;
-  
+
   /* for globalkcore */
   private kshell_node_data gkc = new kshell_node_data ();
   public kshell_node_data gkc () {
     return gkc;
   }
   
-  public void set_maxdegree (int maxdegree) {
+  public void maxdegree (int maxdegree) {
     this.maxdegree = Math.max (maxdegree,1);
   }
-  
-  public void set_numnodes (int n) {
-    this.numnodes = Math.max (n,1);
-  }
+  public int maxdegree () { return maxdegree; }
   
   @Override
   public void reset () {
     super.reset ();
     maxdegree = 0;
-    numnodes = 0;
     gkc.reset ();
   }
 

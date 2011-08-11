@@ -4,6 +4,7 @@ import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
 import java.awt.Dimension;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -109,7 +110,6 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
           BooleanVar db
             = ((BooleanVar)conf_debug.subopts.get ("debug"));
           db.set (true);
-          System.out.printf ("optarg: %s\n", g.getOptarg ());
           conf_debug.parse (g.getOptarg ());
           break;
         case 'D':
@@ -120,6 +120,9 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
           break;
         case 't':
           conf_topology.parse (g.getOptarg ());
+          break;
+        case 'K':
+          conf_kshell_stats.set (true);
           break;
         case 'l':
           conf_layout.parse (g.getOptarg ());
@@ -132,6 +135,9 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
           break;
         case 's':
           conf_sleep.parse (g.getOptarg ());
+          break;
+        case 'T':
+          conf_path_stats.set (true);
           break;
         case 'M':
           conf_model_size.parse (g.getOptarg ());
@@ -149,7 +155,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       jf = new JFrame ();
       jf.add (s.ap);
       jf.pack ();
-      jf.setTitle ("P2P Simulation/Model");
+      jf.setTitle ("k-core Simulation/Model");
       jf.setDefaultCloseOperation (javax.swing.WindowConstants.EXIT_ON_CLOSE);
       jf.setSize (1000, 1000 * s.model_size.height/s.model_size.width);
       jf.setVisible (true);
@@ -158,10 +164,6 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     Layout.factory ("Random", s.network, s.model_size, 10).layout (1);
     
     s.main_loop ();
-  }
-  
-  private void describe_net () {
-    describe_net (0);
   }
   
   private void describe_net (int maxk) {
@@ -210,13 +212,12 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   @Override
   protected void rewire_update_hosts () {
     /* set the mass according to the degree, useful for things like
-     * Force-Directed Layout. maxd is used by the kcore algorithm.
+     * Force-Directed Layout.
      */
     int maxd = network.max_nodal_degree ();
     for (simhost p : network) {
       p.setMass (network.nodal_outdegree (p));
-      p.set_maxdegree (maxd);
-      p.set_numnodes (network.size ());
+      p.maxdegree (maxd);
     }
   }
 }
