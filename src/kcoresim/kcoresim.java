@@ -4,9 +4,9 @@ import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
 import java.awt.Dimension;
-import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Observer;
 
@@ -14,7 +14,6 @@ import javax.swing.JFrame;
 
 import org.nongnu.multigraph.*;
 import org.nongnu.multigraph.layout.*;
-import org.nongnu.multigraph.metrics.*;
 import org.nongnu.multigraph.structure.kshell;
 
 import kcoresim.simhost;
@@ -50,13 +49,14 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     };
   }
   
-  private simhost get_host (protocol<Long> [] protos) {
+  private simhost get_host (Long id, protocol<Long> [] protos) {
     simhost s = new simhost (this, protos.clone ());
-    s.setId (idmap.get (s));
+    s.setId (id);
+    new_node (id, s);
     return s;
   }
-  public simhost get_host () {
-    return get_host (new_protstack_kcore ());
+  public simhost get_host (Long l) {
+    return get_host (l, new_protstack_kcore ());
   }
   
   public kcoresim (Dimension d) {
@@ -65,13 +65,8 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   
   protected void add_initial_hosts () {
     /* create a network */
-    for (int i = 0; i < conf_nodes.get (); i++) {
-      simhost p; 
-      
-    	p = get_host ();
-      
-      network.add (p);
-    }
+    for (int i = 0; i < conf_nodes.get (); i++)
+    	network.add (get_host ((long) i));
   }
   
   final static IntConfigOption conf_nodes = new IntConfigOption (
@@ -80,12 +75,28 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
         LongOpt.REQUIRED_ARGUMENT, 1, Integer.MAX_VALUE)
         .set (10);
   
+  final static SuboptConfigOption conf_perturb
+  = new SuboptConfigOption (
+      "perturb", 'b', "<simulation perturbation options>",
+      "Perturbation of the simulation, e.g. moving nodes.",
+      LongOpt.REQUIRED_ARGUMENT,
+      new ConfigOptionSet () {{
+        put (new IntVar (
+            "ticks",
+            "Number of ticks to perturb simulation at",
+            0, Integer.MAX_VALUE)
+            .set (10));
+        put (new BooleanVar ("perturb", "Move nodes on each iteration"));
+        put (new IntVar ("max","Max. # of perturbations to make",
+                         0, Integer.MAX_VALUE).set (10));
+      }});
   public static void main(String args[]) {    
     int c;
     LinkedList<LongOpt> lopts = new LinkedList<LongOpt> ();
     
     /* Add kcore sim specific config-vars */
     confvars.add (conf_nodes);
+    confvars.add (conf_perturb);
     
     for (ConfigurableOption cv : confvars)
       lopts.add (cv.lopt);
@@ -99,6 +110,9 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       switch (c) {
         case '?':
           usage ("Unknown argument: " + (char)g.getOptopt ());
+          break;
+        case 'b':
+          conf_perturb.parse (g.getOptarg ());
           break;
         case 'p':
           conf_nodes.parse (g.getOptarg ());
@@ -206,7 +220,39 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   
   @Override
   protected void perturb () {
-    return;
+    if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
+      int pticks = ((IntVar)conf_perturb.subopts.get ("ticks")).get ();
+      int maxperturbs = ((IntVar)conf_perturb.subopts.get ("max")).get ();
+      if (pticks > 0
+          && sim_stats.get_ticks () % pticks == (pticks - 1)
+          && ((maxperturbs <= 0) || (sim_stats.get_ticks () / pticks < maxperturbs))) {
+        Iterator<simhost> ith = network.random_node_iterable ().iterator ();
+        
+        if (!ith.hasNext ())
+          return;
+        
+        simhost h1 = ith.next ();
+        
+        if (!ith.hasNext ())
+          return;
+        
+        simhost h2 = ith.next ();
+        
+        if (h1 == h2)
+          return;
+        
+        if (network.is_linked (h1, h2)) {
+          network.remove (h1, h2);
+          return;
+        }
+          
+        debug.printf ("add link %ld to %ld\n", h1.getId (), h2.getId ());
+        
+        network.set (h1, h2, this.default_edge_labeler ().getLabel (h1, h2));
+        
+        setChanged ();
+      }
+    }
   }
 
   @Override
