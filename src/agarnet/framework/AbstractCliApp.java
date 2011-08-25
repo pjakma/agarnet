@@ -45,6 +45,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected Random r = new Random ();
   protected anipanel<Long, H> ap;
   private final int default_bandwidth = 100;
+  private final int default_latency = 3;
   
   protected link<H> _gen_link (H from, H to, int maxbandwidth,
                                int maxlatency) {
@@ -354,7 +355,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   private EdgeLabeler<H, link<H>> _default_edge_labeler =
     new EdgeLabeler<H, link<H>> () {
         public link<H> getLabel (H from, H to) {
-              return _gen_link (from, to, default_bandwidth, 3);
+              return _gen_link (from, to, default_bandwidth, default_latency);
             }
     };
   protected EdgeLabeler<H, link<H>> default_edge_labeler () {
@@ -401,7 +402,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
 
       @Override
       public link<H> edge (H from, H to) {
-        return _gen_link (from, to, default_bandwidth, 100);
+        return _gen_link (from, to, default_bandwidth, default_latency);
       }
 
       @Override
