@@ -3,6 +3,7 @@ package kcoresim;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -95,9 +96,13 @@ public class kcore<N> extends AbstractProtocol<Long> {
         }
       }
       /* Find removed neighbours */
-      for (Long neigh : connected) {
-        if (!newc.contains (neigh))
-          connected.remove (neigh);
+      Iterator<Long> it = connected.iterator ();
+      while (it.hasNext ()) {
+        Long neigh = it.next ();
+        if (!newc.contains (neigh)) {
+          it.remove ();
+          neighbours.remove (neigh);
+        }
       }
     } else
       neighbours.clear ();
