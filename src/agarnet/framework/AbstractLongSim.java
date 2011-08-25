@@ -38,31 +38,37 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     private long ticks;
     public long get_ticks () { return ticks; }
   }
+  protected abstract H get_host (Long id);
   
   /* map Graph node objects to stable, persistent IDs that protocols can use */
-  protected class idmap<N> {
-    private long nextid = 1;
-    
+  private class idmap<N> {
     Map<Long,N> id2simh = new HashMap<Long,N> ();
     Map<N,Long> simh2id = new HashMap<N,Long> ();
     
     synchronized public Long get (N n) {
-      Long l = simh2id.get (n);
-      
       if (n == null)
         throw new AssertionError ("idmap: node must not be null!");
       
-      if (l != null) {
-        return l;
-      }
+      return simh2id.get (n);
+    }
+    
+    synchronized public void put (Long l, N n) {
+      if (n == null)
+        throw new AssertionError ("idmap put: node must not be null!");
+      if (l == null)
+        throw new AssertionError ("idmap put: Long key must not be null!");
       
-      l = nextid++;
+      if (id2simh.get (l) != null)
+        throw new AssertionError ("idmap put: Long key already exists!");
+      if (simh2id.get (n) != null)
+        throw new AssertionError ("idmap put: Node already registered!");
       
       if (id2simh.put (l, n) != null)
         throw new AssertionError ("id already exists, impossible, wtf?" + l);
-            
+      
       simh2id.put (n, l);
-      return l;
+      
+      return;
     }
     synchronized public N get (Long l) {
       return id2simh.get (l);
@@ -82,14 +88,21 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     }
   }
   
+  public void new_node (Long id, H s) {
+    idmap.put (id, s);
+  }
+  
   public Long node2id (H s) {
     return idmap.get (s);
   }
+  
   public H id2node (Long l) {
     return idmap.get (l);
   }
+  
   public H id2node (String sl) {
     long l;
+    H n;
     
     try {
       l = Long.parseLong (sl);
@@ -98,7 +111,10 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       return null;
     }
     
-    return id2node (l);
+    if ((n = id2node (l)) != null)
+      return n;
+    
+    return get_host (l);
   }
   
   public AbstractLongSim (Dimension d) {

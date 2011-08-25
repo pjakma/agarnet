@@ -39,15 +39,16 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
   }
   
   
-  private simhost get_host (simhost.Node type, boolean movable,
+  private simhost get_host (Long id, simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
     simhost s = new simhost (this, type, movable, protos.clone ());
-    s.setId (idmap.get (s));
+    s.setId (id);
+    new_node (id, s);
     return s;
   }
   /* default get_host */
-  protected simhost get_host () {
-    return get_host (simhost.Node.peer, true, new_protstack_peer ());
+  protected simhost get_host (Long id) {
+    return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
   }
   
   public topoapp (Dimension d) {
@@ -57,12 +58,8 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
   protected void add_initial_hosts () {
     
     /* create a network */
-    for (int i = 0; i < conf_nodes.get (); i++) {
-      simhost p; 
-          
-      p = get_host (simhost.Node.peer, true, new_protstack_peer ());
-          
-      network.add (p);
+    for (int i = 0; i < conf_nodes.get (); i++) {      
+      network.add (get_host ((long) i));
     }
   }
   

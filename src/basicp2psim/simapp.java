@@ -70,14 +70,15 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     };
   }
   
-  private simhost get_host (simhost.Node type, boolean movable,
+  private simhost get_host (Long id, simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
     simhost s = new simhost (this, type, movable, protos.clone ());
-    s.setId (idmap.get (s));
+    s.setId (id);
+    new_node (id, s);
     return s;
   }
-  protected simhost get_host () {
-    return get_host (simhost.Node.peer, true, new_protstack_peer ());
+  protected simhost get_host (Long id) {
+    return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
   }
   
   public simapp (Dimension d) {
@@ -85,27 +86,27 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
   }
   
   protected void add_initial_hosts () {
+    long num = 1;
+    
     /* create a network */
     for (int i = 0; i < conf_peers.get (); i++) {
-      simhost p; 
-          
+      simhost p;
+      
       if (conf_leeches.get () < 1
           && r.nextFloat () <= conf_leeches.get ())
-        p = get_host (simhost.Node.leech, true, new_protstack_leech ());
+        p = get_host (num++, simhost.Node.leech, true, new_protstack_leech ());
       else
-        p = get_host (simhost.Node.peer, true, new_protstack_peer ());
-          
+        p = get_host (num++, simhost.Node.peer, true, new_protstack_peer ());
+      
       network.add (p);
     }
       
     if (conf_leeches.get () >= 1) {
-      for (int i = 0; i < conf_leeches.get (); i++) {
-        simhost p = get_host (simhost.Node.leech, true, new_protstack_leech ());
-        network.add (p);
-      }
+      for (int i = 0; i < conf_leeches.get (); i++)
+        network.add (get_host (num++, simhost.Node.leech, true, new_protstack_leech ()));
     }
       
-    network.add (get_host (simhost.Node.seed, false, new_protstack_seed ()));
+    network.add (get_host (num, simhost.Node.seed, false, new_protstack_seed ()));
   }
   
   /* peer2peer simulation specific variables */
