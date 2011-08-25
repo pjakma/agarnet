@@ -122,6 +122,21 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     network.addObserver (this);
   }
   
+  /**
+   * Setup code for each run. The default implementation is to 
+   * reset every node and edge in the network.
+   */
+  protected void run_setup (int run) {
+    /* reset the network, not needed first time around, but no harm
+     * in exercising the code anyway
+     */
+    for (H p : network) {
+      p.reset ();
+      for (Edge<H,link<H>> e : network.edges (p))
+        e.label ().reset ();
+    }
+  }
+  
   final public void main_loop () {    
     doing_network_setup = false;
     int runs = get_runs ();
@@ -131,14 +146,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     for (int i = 0; i < runs; i++) {
       System.out.println ("# starting run " + i);
       
-      /* reset the network, not needed first time around, but no harm
-       * in exercising the code anyway
-       */
-      for (H p : network) {
-        p.reset ();
-        for (Edge<H,link<H>> e : network.edges (p))
-          e.label ().reset ();
-      }
+      run_setup (i);
       
       rewire ();
       
@@ -285,7 +293,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
    * Indicate whether or not the simulation has converged. I.e. has ceased to
    * make progress. Concrete implementations may wish to override this and
    * use more specific knowledge of the simulation and types of hosts to
-   * find cases where a simulation has convered.
+   * find cases where a simulation has converged.
    * @return
    */
   protected boolean has_converged () { return false; }
@@ -305,8 +313,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     debug.printf ("tx: %s %s -> %s\n", data, from, to);
     
     if (edge == null) {
-      debug.printf (debug.levels.WARNING,
-                    "tx called for non-existent edge %s -> %s!",
+      debug.printf ("tx called for non-existent edge %s -> %s!",
                     from, to);
       return false;
     }
