@@ -48,11 +48,12 @@ public class kcore<N> extends AbstractProtocol<Long> {
     genupdated = true;
   }
   private void generation_update (long gen) {
-    if (gen < generation)
+    genupdated = true;
+    
+    if (gen <= generation)
       return;
     
     generation = gen;
-    genupdated = true;
   }
   
   boolean generation_check (neighbour_msg m) {
@@ -201,9 +202,10 @@ public class kcore<N> extends AbstractProtocol<Long> {
     }
     
     stats_inc (stat.recvd);
-    neighbours.put (src, m);
     
     generation_check (m);
+    
+    neighbours.put (src, m);
     
     debug.printf ("Received %s from %d\n", m, src);
     
