@@ -50,7 +50,6 @@ public class simhost extends AnimatableHost<Long, simhost>
 
   @Override
   public String toString () {
-    // TODO Auto-generated method stub
     return "(host: " + getId () + ", "
                + "d: " + stat_get (stat.stored) + ", "
                + "g: " + gkc.k + ", "
