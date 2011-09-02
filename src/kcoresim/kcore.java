@@ -1,6 +1,5 @@
 package kcoresim;
 
-import java.awt.Color;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,7 +56,11 @@ public class kcore<N> extends AbstractProtocol<Long> {
   }
   
   boolean generation_check (neighbour_msg m) {
-    if (m.gen > generation) {
+    neighbour_msg prevm;
+    
+    if (m.gen > generation
+        || ((prevm = neighbours.get (m.srcid)) != null
+            && prevm.gen < m.gen)) {
       generation_update (m.gen);
       return true;
     }
@@ -90,9 +93,9 @@ public class kcore<N> extends AbstractProtocol<Long> {
       /* Find new neighbours */
       for (Long neigh : newc) {
         if (!connected.contains (neigh)) {
-          neighbours.put (neigh, get_default_new_nmsg (newc.size ()));
-          
+          /* add default message, with new degree, for new neighbour */
           generation_update ();
+          neighbours.put (neigh, get_default_new_nmsg (newc.size ()));
         }
       }
       /* Find removed neighbours */
@@ -114,7 +117,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
   }
   
   private void broadcast (int kbound) {
-    debug.printf ("broadcast %d\n", kbound);
+    debug.printf ("%d\n", kbound);
     
     for (Long neigh : connected)
       send (neigh, get_default_new_nmsg ());
@@ -127,7 +130,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
     int [] seen = new int [connected.size () + 1];
     int highestseen = 0;
     
-    debug.printf ("calc_kbound: neighb vals: %s\n", neighbours.values ());
+    debug.printf ("neighb vals: %s\n", neighbours.values ());
     
     for (neighbour_msg nmsg : neighbours.values ()) {
       int neigh_bound = (nmsg.gen == generation) ? nmsg.kbound
@@ -139,10 +142,12 @@ public class kcore<N> extends AbstractProtocol<Long> {
     }
     
     if (debug.applies ()) {
-      debug.printf ("calc_kbound: seen:");
+      StringBuilder sbseen = new StringBuilder ();
+      
       for (int i = 0; i < seen.length; i++)
-        debug.printf (" %d", seen[i]);
-      debug.printf ("\n");
+        sbseen.append (" " + seen[i]);
+      
+      debug.printf ("seen: %s\n", sbseen);
     }
     
     for (int i = highestseen; i >= 0; i--) {
@@ -161,7 +166,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
       break;
     }
     
-    debug.printf ("calc_kbound: %d\n", kbound);
+    debug.printf ("result %d\n", kbound);
     
     return kbound;
   }
@@ -169,9 +174,9 @@ public class kcore<N> extends AbstractProtocol<Long> {
   private boolean kbound () {
     int origkbound = kbound;
     
-    debug.printf ("kbound: start, orig %d\n", origkbound);
+    debug.printf ("start, orig %d\n", origkbound);
     kbound = calc_kbound ();
-    debug.printf ("kbound: %d\n", kbound);
+    debug.printf ("got %d\n", kbound);
     
     return (origkbound != kbound);
   }
@@ -190,7 +195,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
         
     if (m.srcid != src.longValue ()) {
       debug.printf (debug.levels.ERROR,
-                    "up: blah src %d doesn't match packet Id %d!\n",
+                    "src %d doesn't match packet Id %d!\n",
                     src, m.srcid);
       return;
     }
@@ -200,7 +205,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
     
     generation_check (m);
     
-    debug.printf ("up: received %s from %d\n", m, src);
+    debug.printf ("Received %s from %d\n", m, src);
     
     if (kbound () || genupdated)
       broadcast (kbound);
