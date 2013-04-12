@@ -29,7 +29,10 @@ public class host<I,N> extends AbstractProtocol<I> {
   
   /* the amount of cpu power left in this tick */;
   private int cpu;
-  private static final int cpu_per_tick = 20;
+  /* limit the number of messages which may be processed per tick
+   * -1 for no limit.
+   */
+  private static final int cpu_per_tick = -1;
   
   private class recvd_msg {
     final I src;
@@ -61,6 +64,7 @@ public class host<I,N> extends AbstractProtocol<I> {
     above = protocols[0];
   }
   
+  @Override
   public host<I,N> setId (I id) {
     selfId = id;
     stack_protocols ();
@@ -102,6 +106,7 @@ public class host<I,N> extends AbstractProtocol<I> {
     
     above.up (msg.src, msg.data);
     stats_inc (protocol_stats.stat.recvd);
+    setChanged ();
   }
   
   public void insert (I self, protocol<I> a, protocol<I> b) {
@@ -120,10 +125,12 @@ public class host<I,N> extends AbstractProtocol<I> {
     return super.stat_get (s);
   }
   
+  @Override
   public String toString () {
     return "(" + selfId + ")";
   }
   
+  @Override
   public void reset () {
     I id = selfId;
     
@@ -144,16 +151,19 @@ public class host<I,N> extends AbstractProtocol<I> {
     
     _check_ids ();
     
-    while (cpu > 0 && !inputbuf.isEmpty ())
+    while ((cpu < 0 || cpu > 0) && !inputbuf.isEmpty ())
       _do_up (inputbuf.poll ());
     
+    if (!inputbuf.isEmpty ())
+      setChanged ();
+
     for (int i = 0; i < protocols.length; i++) {
       protocols[i].tick ();
       if (protocols[i].hasChanged ())
         setChanged ();
     }
     
-    debug.printf ("host %s: tick\n", selfId);
+    debug.printf ("host %s: tick %d\n", selfId, ticks);
   }
   
   private void _check_ids () {
@@ -167,9 +177,11 @@ public class host<I,N> extends AbstractProtocol<I> {
         throw new AssertionError ("Ids don't match!");
   }
   
+  @Override
   public void link_update () {
     for (int i = 0; i < protocols.length; i++)
       protocols[i].link_update ();
+    setChanged ();
   }
   
   @SuppressWarnings ("unchecked")

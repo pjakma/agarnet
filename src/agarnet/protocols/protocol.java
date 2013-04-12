@@ -39,9 +39,6 @@ public interface protocol<N>
    * 
    * Coping with this problem is an implementation issue, e.g. by using
    * a single type that contains multiple spaces. 
-   * 
-   * For tT
-   * e common case 
    */
   protocol<N> setId (N id);
   N getId ();

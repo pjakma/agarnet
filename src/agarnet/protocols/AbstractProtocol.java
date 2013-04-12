@@ -69,6 +69,7 @@ public abstract class AbstractProtocol<N>
     above = below = null;
     selfId = null;
     stats_reset ();
+    clearChanged ();
   }
   
   public void tick () { ticks++; clearChanged (); }
@@ -77,13 +78,25 @@ public abstract class AbstractProtocol<N>
   /* These are in the spirit of the Observable class, however the decision
    * to not implement the rest of Observable is a deliberate one. Such
    * a role is best left to a general host class alone.
+   *
+   * /* The simulator's default run() loop will consider that a host that
+   * hasChanged() still has more work to do, and keep the simulation running
+   * for at least another tick.
    */
   protected void clearChanged () {
     changed = false;
   }
+  /* The simulator's default run() loop will consider that a host that
+   * hasChanged() still has more work to do, and keep the simulation running
+   * for at least another tick.
+   */
   public boolean hasChanged () {
     return changed;
   }
+  /* The simulator's default run() loop will consider that a host that
+   * hasChanged() still has more work to do, and keep the simulation running
+   * for at least another tick.
+   */
   protected  void setChanged () {
     changed = true;
   }
