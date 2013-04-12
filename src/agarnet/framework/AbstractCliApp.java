@@ -44,17 +44,19 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   /* Force layout can be re-used while the sim runs */
   protected Random r = new Random ();
   protected anipanel<Long, H> ap;
-  private final int default_bandwidth = 100;
-  private final int default_latency = 3;
-  
-  protected link<H> _gen_link (H from, H to, int maxbandwidth,
-                               int maxlatency) {
-    unilink<H> ul1, ul2;
-    ul1 = new unilink<H> (from, 1 + r.nextInt (maxbandwidth),
-                                         1 + r.nextInt (maxlatency));
-    ul2 = new unilink<H> (to, ul1.bandwidth, ul1.latency);
-    return new link<H> (ul1, ul2);
+
+  private int gen_rand_in_range_inc (String desc, int max, int min) {
+    if (min < 1 || max - min < 0)
+      throw new IllegalArgumentException (
+                  "Illegal " + desc + " values, min: " + min + ", max: " + max);
+    if (max == min)
+      return min;
+    return min + r.nextInt (max - min + 1);
   }
+  //protected link<H> _gen_link (H from, H to,
+  //                             int maxbandwidth, int minbandwidth,
+  //                             int maxlatency, int minlatency) {
+    
   protected link<H> _gen_link (H from, H to, int bandwidth,
                                int from_latency, int to_latency) {
     unilink<H> ul1, ul2;
@@ -69,7 +71,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       "period", 'P', "<number>",
       "Period for repeating behaviour of certain objects, like seeds",
       LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
-      .set (5);
+      .set (2);
   
   protected static final IntConfigOption conf_runs = new IntConfigOption ("runs", 'r', "<runs>",
       "# of simulation runs to make."
@@ -81,7 +83,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       "sleep", 's', "<sleep>",
       "period or amount of time to sleep between ticks of the simulation",
       LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
-      .set (1000);
+      .set (0);
   
   protected static final DimensionConfigOption conf_model_size = new DimensionConfigOption (
       "model-size", 'M', "<width>x<height>",
@@ -221,7 +223,35 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
           "msgfilter",
           "Filter log messages by content, using given regex"));
   }});
-  
+
+  protected static final SuboptConfigOption conf_link
+    = new SuboptConfigOption (
+      "link", 'L', "<Link sub-options>",
+      "Simulation link parameters",
+      LongOpt.REQUIRED_ARGUMENT,
+      new ConfigOptionSet () {{
+        put (new IntVar (
+            "minbw",
+            "Minimum bandwith of links, in bytes",
+            1, Integer.MAX_VALUE)
+            .set (1000));
+        put (new IntVar (
+            "maxbw",
+            "Maximum bandwith of links, in bytes",
+            1, Integer.MAX_VALUE)
+            .set (10000));
+        put (new IntVar (
+            "minlat",
+            "Minimum latency of links, in simulation ticks",
+            1, Integer.MAX_VALUE)
+            .set (1));
+        put (new IntVar (
+            "maxlat",
+            "Maximum latency of links, in simulation ticks",
+            1, Integer.MAX_VALUE)
+            .set (1));
+      }});
+
   /* booleans */
   protected static final BooleanConfigOption conf_gui
     = new BooleanConfigOption (
@@ -256,7 +286,8 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
                 conf_path_stats, conf_kshell_stats,
     conf_model_size,
     conf_topology,
-    conf_layout));
+    conf_layout,
+    conf_link));
   
   protected static void usage (String s) {
     if (s != null)
@@ -325,6 +356,14 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       }
       sb.append ("\n");
     }
+
+    sb.append ("\nSettings:\n");
+    for (ConfigurableOption cv : confvars) {
+      sb.append (cv.toString ());
+      sb.append ("\n");
+    }
+    sb.append ("\n");
+    
     System.out.println (sb);
     System.exit (1);
   }
@@ -352,13 +391,20 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   }
   
   /* callback interface to label a new edge */
-  private EdgeLabeler<H, link<H>> _default_edge_labeler =
-    new EdgeLabeler<H, link<H>> () {
-        public link<H> getLabel (H from, H to) {
-              return _gen_link (from, to, default_bandwidth, default_latency);
-            }
-    };
+  private EdgeLabeler<H, link<H>> _default_edge_labeler = null;
   protected EdgeLabeler<H, link<H>> default_edge_labeler () {
+    if (_default_edge_labeler == null)
+       _default_edge_labeler = new EdgeLabeler<H, link<H>> () {
+          final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
+          final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
+          final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
+          final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
+          public link<H> getLabel (H from, H to) {
+            int bw = gen_rand_in_range_inc ("Bandwidth", maxbw, minbw);
+            int lat = gen_rand_in_range_inc ("Latency", maxlat, minlat);
+            return _gen_link (from, to, bw, lat, lat);
+          }
+       };
     return _default_edge_labeler;
   }
   
@@ -376,7 +422,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   
   private as_graph_reader.labeler<H,link<H>> asgraphlabeler () {
     return new as_graph_reader.labeler<H,link<H>> () {
-      
+      final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
+      final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
+      final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
+      final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
+      final int bw = gen_rand_in_range_inc ("bandwidth", maxbw, minbw);
+      final int lat = gen_rand_in_range_inc ("latency", maxlat, minlat);
       private int upscale (double latency) {
         int l = (int) Math.round (latency * 100);
         
@@ -397,12 +448,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
                                               tul.latency);
         }
         
-        return _gen_link (from, to, default_bandwidth, upscale (latency));
+        return _gen_link (from, to, bw, upscale (latency), upscale (latency));
       }
 
       @Override
       public link<H> edge (H from, H to) {
-        return _gen_link (from, to, default_bandwidth, default_latency);
+        return _gen_link (from, to, bw, lat, lat);
       }
 
       @Override
@@ -523,14 +574,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     return conf_random_tick.get ();
   }
   
-  protected void rewire_update_hosts () {
-    /* set the mass according to the degree, useful for things like
-     * Force-Directed Layout.
-     */
-    for (H p : network)
-      p.setMass (network.nodal_outdegree (p));
-  }
-  
   /* rewire according to some algorithm */
   private void rewire_alg (TopologyConfigOption tconf, String alg) {
     /* Wire up the graph in some fashion */
@@ -612,31 +655,27 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     else
       rewire_alg (tconf, type);
     
-    rewire_update_hosts ();
-    
     if (conf_gui.get ())
       initial_layout ();
-    
-    setChanged ();
   }
-  
-  abstract protected void add_initial_hosts ();
-  
+    
   protected void initial_setup () {
     /* file based? Then its done on each rewire */
-    if (conf_topology.get ().equals ("AdjMatrix"))
-      return;
-    if (conf_topology.get ().equals ("ASGraph"))
-      return;
+    if (conf_topology != null && conf_topology.get () != null) {
+      if (conf_topology.get ().equals ("AdjMatrix"))
+        return;
+      if (conf_topology.get ().equals ("ASGraph"))
+        return;
+    }
     
     /* otherwise, hosts may need to be created initially,
-     * delegate to child.
+     * delegate to extending class.
      */
     add_initial_hosts ();
   }
   
   private void describe_links () {
-    System.out.println ("links:");
+    debug.println ("links:");
     for (H h : network) {
       for (Edge<H,link<H>> e: network.edges (h))
         debug.println (e.label ().get (h).toString ());
@@ -712,7 +751,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   /* k-shell related stats */
   private void describe_kshells () {
     int maxk = kshell.calc (network);
-    int count[] = new int [maxk];
+    int count[] = new int [maxk + 1];
     
     //debug.println (debug.levels.ERROR, "trigger..");
     
@@ -723,6 +762,11 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     for (int i = 0; i < count.length; i++) {
       System.out.printf ("shell %2d : %d nodes\n", i, count[i]);
     }
+    System.out.println ("shell state dump start (Id k_max)");
+    for (H h : network) {
+      System.out.println (h.getId () + " " + h.gkc ().k);
+    }
+    System.out.println ("shell state dump end");
   }
   
   /* path related statistics */
@@ -748,13 +792,14 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
                             public boolean test (H test) {
                               return (test.getSize () == 0);
                           }}));
-
-    System.out.println ("Messages Sent: " + sim_stats.get_messages_sent ());
-    System.out.println ("Converged: " + has_converged ());
-    System.out.println ("Ticks: " + sim_stats.get_ticks ());
-    System.out.println ("Memory: " + Runtime.getRuntime ().totalMemory ()
-                        + " " + (Runtime.getRuntime ().totalMemory () >> 20)
-                        + " MiB");
+    if (get_runs () > 0) {
+      System.out.println ("Messages Sent: " + sim_stats.get_messages_sent ());
+      System.out.println ("Converged: " + has_converged ());
+      System.out.println ("Ticks: " + sim_stats.get_ticks ());
+      System.out.println ("Memory: " + Runtime.getRuntime ().totalMemory ()
+                          + " " + (Runtime.getRuntime ().totalMemory () >> 20)
+                          + " MiB");
+    }
     if (conf_path_stats.get ())
       describe_paths ();
     if (conf_kshell_stats.get ())

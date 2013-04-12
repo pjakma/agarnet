@@ -107,7 +107,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     try {
       l = Long.parseLong (sl);
     } catch (NumberFormatException e) {
-      debug.println ("Invalid host identifier: " + sl);
+      debug.println (debug.levels.WARNING, "Invalid host identifier: " + sl);
       return null;
     }
     
@@ -122,14 +122,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     network.addObserver (this);
   }
   
-  /**
-   * Setup code for each run. The default implementation is to 
-   * reset every node and edge in the network.
-   */
-  protected void run_setup (int run) {
-    /* reset the network, not needed first time around, but no harm
-     * in exercising the code anyway
-     */
+  final protected void reset_network () {
     for (H p : network) {
       p.reset ();
       for (Edge<H,link<H>> e : network.edges (p))
@@ -137,27 +130,61 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     }
   }
   
-  final public void main_loop () {    
-    doing_network_setup = false;
-    int runs = get_runs ();
-    
+  /**
+   * Setup code for each run. The default implementation is to 
+   * rewire the graph, reset every node and edge in the network.
+   */
+  protected void run_setup (int run) {
+    reset_network ();
+    rewire ();
+    rewire_update_hosts ();
+  }
+  
+  /**
+   * Hook for initial setup of the hosts, prior to any runs.
+   * Default implementation simply calls the add_initial_hosts hook.
+   */
+  protected void initial_setup () {
+    add_initial_hosts ();
+  }
+  
+  final public void main_loop () {
+    debug.println ("initial setup");
+    network.plugObservable ();
     initial_setup ();
     
-    for (int i = 0; i < runs; i++) {
-      System.out.println ("# starting run " + i);
+    doing_network_setup = false;
+    
+    for (H p : network)
+      p.link_update ();
+    
+    int runs = get_runs ();
+    
+    /* runs == 0 is a special-case meaning:
+     * "setup the graph and describe it, but don't run the
+     * "protocol"
+     */
+    for (int i = 0; runs == 0 || i < runs; i++) {
+      System.out.println ("\n# starting run " + i);
       
+      network.plugObservable ();
       run_setup (i);
-      
-      rewire ();
-      
+      setChanged ();
+      notifyObservers ();
+      network.unplugObservable ();
+
       describe_begin ();
       
       long start = System.currentTimeMillis ();
-      run ();
+      if (runs > 0)
+        run ();
       long fin = System.currentTimeMillis ();
       
       System.out.printf ("Runtime: %.3f seconds\n", (float)(fin - start) / 1000);
       describe_end ();
+      
+      if (runs == 0)
+        runs--;
     }
   }
   
@@ -189,7 +216,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   abstract protected void describe_end ();
   abstract protected void rewire ();
   abstract protected boolean get_random_tick ();
-  abstract protected void initial_setup ();
+  abstract protected void add_initial_hosts ();
   
   /**
    * Retrieve the period for the simulation: a granularity of time
@@ -230,20 +257,16 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       /* Links have to be ticked over separately from nodes, otherwise
        * a message might get across multiple nodes and links in just one tick. 
        */
-      debug.println ("ticking links");
-      
-      Iterable<H> nib = this.get_random_tick () ? network.random_node_iterable ()
+      Iterable<H> netiter = this.get_random_tick () ? network.random_node_iterable ()
                                                 : network;
       
-      for (H p : nib)
+      for (H p : netiter)
         for (Edge<H,link<H>> e : network.edges (p)) {
-          debug.printf ("tick link %s\n", e);
           e.label ().get (p).tick ();
         }
       
       /* now tick the nodes and deliver any messages to them */
-      debug.println ("ticking nodes");
-      for (H p : nib) {
+      for (H p : netiter) {
         p.tick ();
         
         for (Edge<H,link<H>> e : network.edges (p)) {          
@@ -253,10 +276,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
           if (e.label ().size () > 0)
             setChanged ();
           
-          debug.printf (" check link: %s\n", e);
-          
           while ((data = e.label ().get (p).poll ()) != null) {
-            debug.printf ("Dequeue on link %s\n", e);  
             e.to ().up (idmap.get (p), data);
           }
         }
@@ -310,10 +330,8 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   final public boolean tx (Long from, Long to, byte [] data) {
     Edge<H, link<H>> edge = network.edge (idmap.get (from), idmap.get (to));
     
-    debug.printf ("tx: %s %s -> %s\n", data, from, to);
-    
     if (edge == null) {
-      debug.printf ("tx called for non-existent edge %s -> %s!",
+      debug.printf (debug.levels.ERROR, "tx called for non-existent edge %s -> %s!",
                     from, to);
       return false;
     }
@@ -328,6 +346,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     if (doing_network_setup)
       return;
     
+    setChanged ();
+    notifyObservers ();
+    
     /* we have to notify all hosts, so long as we don't have an in-sim
      * routing protocol
      */
@@ -336,5 +357,22 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     //else
       for (H h : network)
         h.link_update ();
+  }
+  
+  protected void rewire_update_hosts () {
+    for (H p : network)
+      rewire_update_host (p);
+    setChanged ();
+  }
+  
+  /**
+   * Hook, called after network has been rewired, to update a host.
+   * Default implementation updates the mass of nodes with their degree.
+   */
+  protected void rewire_update_host (H host) {
+    /* set the mass according to the degree, useful for things like
+     * Force-Directed Layout.
+     */
+    host.setMass (network.nodal_outdegree (host));
   }
 }
