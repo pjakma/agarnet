@@ -257,8 +257,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       /* Links have to be ticked over separately from nodes, otherwise
        * a message might get across multiple nodes and links in just one tick. 
        */
-      Iterable<H> netiter = this.get_random_tick () ? network.random_node_iterable ()
-                                                : network;
+      Iterable<H> netiter
+        = this.get_random_tick () ? network.random_node_iterable ()
+                                  : network;
       
       for (H p : netiter)
         for (Edge<H,link<H>> e : network.edges (p)) {
