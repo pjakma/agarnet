@@ -151,10 +151,8 @@ public class as_graph_reader<N,E> {
   }
   
   public void parse () throws IOException {
-    network.plugObservable ();
     while (scr.hasNextLine ())
       parse_line (scr.nextLine ());
     close ();
-    network.unplugObservable ();
   }
 }
