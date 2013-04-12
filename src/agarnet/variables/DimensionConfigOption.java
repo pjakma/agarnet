@@ -40,6 +40,6 @@ public class DimensionConfigOption extends ConfigurableOption {
   }
   
   public String toString () {
-    return super.toString () + ": " + d;
+    return lopt.getName () + ": " + d;
   }
 }

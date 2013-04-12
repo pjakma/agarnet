@@ -20,7 +20,7 @@ public class BooleanConfigOption extends ConfigurableOption {
   }
   
   public String toString () {
-    return super.toString () + ": " + val;
+    return lopt.getName () + ": " + val;
   }
 
   @Override

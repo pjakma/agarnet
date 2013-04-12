@@ -24,6 +24,9 @@ public class SuboptConfigOption extends ConfigurableOption {
     int ret = subopt.get ();
     primary = subopt.optionp;
     
+    if (ret < 0)
+      throw new IllegalArgumentException ("Unknown suboption: "
+                                          + subopt.valuep);
     if (ret >= 0) {
       if (subopts.branch_keys ().contains (subopt.optionp))
         parse_subopts (subopts, subopt.optionp, args);
@@ -46,14 +49,14 @@ public class SuboptConfigOption extends ConfigurableOption {
   public String toString () {
     StringBuilder sb = new StringBuilder ();
     
-    sb.append (super.toString () + ": " + primary + "\n");
+    sb.append (lopt.getName () + ": " + primary);
     if (subopts.num_subopts (primary) > 0)
       for (String subkey : subopts.subopt_keys (primary))
         if (subopts.get (primary, subkey).isSet ())
-          sb.append ("  " + subopts.get (primary, subkey) + "\n");
+          sb.append ("\n  " + subopts.get (primary, subkey));
     for (String key : subopts.subopt_keys ())
       if (subopts.get (key).isSet ())
-        sb.append ("  " + subopts.get (key) + "\n");
+        sb.append ("\n  " + subopts.get (key));
     return sb.toString ();
   }
 }

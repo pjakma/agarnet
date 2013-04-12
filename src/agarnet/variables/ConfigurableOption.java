@@ -4,7 +4,10 @@ import java.util.List;
 import gnu.getopt.LongOpt;
 import agarnet.Subopt;
 import agarnet.variables.atoms.*;
-
+/* Support for a Config option with 0 or more sub-options, e.g.:
+ * --option ([sub-option1][,sub-option2][,...])
+ * The details of which are down to the concrete implementations.
+ */
 public abstract class ConfigurableOption {
   public final String help;
   public final String arg_desc;
@@ -151,10 +154,31 @@ public abstract class ConfigurableOption {
       
       obv.set (subopt.valuep);
     }
+    
+    if (subopt.valuep != null)
+      throw new IllegalArgumentException ("Unknown suboption: " 
+                                          + subopt.valuep);
   }
   
   public String toString () {
-    return lopt.getName ();
+    StringBuilder sb = new StringBuilder ();
+    
+    /* special-case: a booleanvar subopt, with same name as 
+     * as the option itself, is assumed to stand for the
+     * option.
+     */
+    if (subopts != null && subopts.get (lopt.getName ()) != null)
+      sb.append (subopts.get (lopt.getName ()));
+    else
+      sb.append (lopt.getName () + ":");
+
+    if (subopts == null)
+      return sb.toString ();
+
+    for (String key : subopts.subopt_keys ())
+      if (subopts.get (key).isSet ())
+        sb.append ("\n  " + subopts.get (key));
+    return sb.toString ();
   }
   public abstract ConfigurableOption parse (String arg);
 }

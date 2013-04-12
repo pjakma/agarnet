@@ -20,7 +20,7 @@ public class StringConfigOption extends ConfigurableOption {
   }
   
   public String toString () {
-    return super.toString () + ": " + val;
+    return lopt.getName () + ": " + val;
   }
 
   @Override
