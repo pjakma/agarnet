@@ -130,6 +130,8 @@ public class unilink<I> extends abstract_tickable
    * Collections interface methods. 
    */
   public boolean offer (byte [] data) {
+    boolean ret = false;
+
     if (data.length + buffered > capacity)
       return false;
     
@@ -140,13 +142,10 @@ public class unilink<I> extends abstract_tickable
      */
     if (txbuf.offer (data)) {
       buffered += data.length;
-      debug.printf ("%s, enq. msg %s, len %d (buf: %d)\n",
-                   this, data, data.length, buffered);
-      _sanity_check_buffered ();
-      return true;
+      ret = true;
     }
     _sanity_check_buffered ();
-    return false;
+    return ret;
   }
   
   public byte [] peek () {
@@ -158,11 +157,8 @@ public class unilink<I> extends abstract_tickable
     
     byte [] data = rxbuf.poll ();
     
-    if (data != null) {
+    if (data != null)
       buffered -= data.length;
-      debug.printf ("%s, deq. msg %s, len %d (buf: %d)\n",
-                    this, data, data.length, buffered);
-    }
     
     _sanity_check_buffered ();
     
@@ -230,6 +226,7 @@ public class unilink<I> extends abstract_tickable
     _sanity_check_buffered ();
   }
   
+  @Override
   public void tick () {
     _sanity_check_buffered ();
     
@@ -242,9 +239,13 @@ public class unilink<I> extends abstract_tickable
     _sanity_check_buffered ();
   }
   
+  @Override
   public String toString () {
     _sanity_check_buffered ();
     return "ul: " + id.toString () + " bw/lat/buf: " + bandwidth + "/" + latency
-           + "/" + buffered;
+           + "/" + buffered
+           + " tx/l/rx q: " + _bytes_in_queue (txbuf)
+                            + "/" + _bytes_in_linkq ()
+                            + "/" + _bytes_in_queue (rxbuf);
   }
 }
