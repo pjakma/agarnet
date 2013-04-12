@@ -762,11 +762,11 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     for (int i = 0; i < count.length; i++) {
       System.out.printf ("shell %2d : %d nodes\n", i, count[i]);
     }
-    System.out.println ("shell state dump start (Id k_max)");
+    debug.println ("shell state dump start (Id k_max)");
     for (H h : network) {
-      System.out.println (h.getId () + " " + h.gkc ().k);
+      debug.println (h.getId () + " " + h.gkc ().k);
     }
-    System.out.println ("shell state dump end");
+    debug.println ("shell state dump end");
   }
   
   /* path related statistics */
