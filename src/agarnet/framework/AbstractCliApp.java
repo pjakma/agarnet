@@ -29,6 +29,7 @@ import agarnet.link.*;
 import agarnet.protocols.host.AnimatableHost;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
+import java.util.InputMismatchException;
 
 /**
  * An abstract parent class containing common functionality for a command-line interface
@@ -635,14 +636,20 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     } catch (FileNotFoundException e) {
       System.out.println ("Unable to open " + fname);
       System.exit (1);
+    } catch (InputMismatchException e) {
+      System.out.println ("Error parsing + " + fname + ": " + e.getMessage ());
+      System.exit (1);
     } catch (IOException e) {
       System.out.println ("I/O error parsing " + fname);
+      System.out.println (e.getCause ());
       System.exit (1);
-    } 
-//    catch (InputMismatchException e) {
-//      System.out.println ("Error parsing: " + e.getMessage ());
-//      System.exit (1);
-//    }
+    } catch (Exception e) {
+      System.out.print ("Exception parsing " + fname);
+      if (e.getMessage () != null)
+        System.out.println (": " + e.getMessage ());
+      e.printStackTrace ();
+      System.exit (1);
+    }
   }
   
   @Override

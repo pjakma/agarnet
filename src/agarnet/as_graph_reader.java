@@ -22,10 +22,86 @@ public class as_graph_reader<N,E> {
   Scanner scr = null;
   final String sre_double = "\\d*([.]\\d+)?";
   final String sre_asn = "\\d+";
+  final String sre_tstamp = "\\d+";
+  final String sre_index = "\\d+";
   final String sre_aslatency = "(" +sre_asn+ "),(" + sre_double + ")";
-  Pattern aslatency = Pattern.compile (sre_aslatency);
-  Pattern aslatencyform = Pattern.compile ("("+sre_asn+")\\s(" +sre_double+ ")\\s(" +sre_aslatency+ ")*\\s*$");
-  Pattern asasform = Pattern.compile ("("+sre_asn+")\\s+("+sre_asn+")\\s*");
+
+  private abstract class acceptpattern<N,E> {
+    final Pattern re;
+    protected acceptpattern (String re) { this.re = Pattern.compile (re); }
+    abstract void parse_line (MatchResult res);
+  }
+  acceptpattern<N,E> [] acceptpatterns;
+
+  private void init_acceptpatterns () {
+      acceptpatterns = new acceptpattern []{
+        /* "ASN internal_latency [to_ASN_edge latency]+" format */
+        new acceptpattern ("("+sre_asn+")\\s(" +sre_double+ ")\\s(" +sre_aslatency+ ")*\\s*$") {
+          @Override
+          void parse_line (MatchResult m) {
+            N from_as = labeler.node (m.group (1));
+            @SuppressWarnings ("unused")
+            double from_as_latency = Double.parseDouble (m.group (2));
+
+            for (int i = 3; i < m.groupCount (); i++) {
+              //MatchResult m = scr.match ();
+              N to_as = labeler.node (m.group (i));
+              double to_as_latency = Double.parseDouble (m.group (i + 1));
+              E newlabel = labeler.edge (from_as, to_as, to_as_latency);
+
+              debug.printf ("setting %s to %s\n", from_as, to_as);
+
+              try {
+                network.remove (from_as, to_as);
+                network.set (from_as, to_as, newlabel);
+              } catch (UnsupportedOperationException e) {
+                debug.printf (debug.levels.ERROR, "Error setting %s -> %s (%f): %s\n",
+                              from_as, to_as, to_as_latency, e.getMessage ());
+                debug.printf (debug.levels.ERROR, "While parsing: %s\n", m.group (0));
+              }
+            }
+          }
+        },
+        /* "ASN ASN" format */
+        new acceptpattern ("("+sre_asn+")\\s+("+sre_asn+")\\s*") {
+          @Override
+          void parse_line (MatchResult m) {
+            N from_as = labeler.node (m.group (1));
+            N to_as = labeler.node (m.group (2));
+
+            debug.printf ("setting %s (%s) to %s (%s)\n",
+                         from_as, m.group (1), to_as, m.group (2));
+
+            network.remove (from_as, to_as);
+            network.set (from_as, to_as, labeler.edge (from_as, to_as));
+          }
+        },
+        /* IRL format:
+         * "ASN to_AS first_seen last_seen AS_PATH_pos"
+         * timestamps are unix format.
+         */
+        new acceptpattern (String.format
+                           ("(%s)\\s+(%s)\\s+(%s)\\s+(%s)\\s+(%s)\\s*",
+                             sre_asn, sre_asn, sre_tstamp, sre_tstamp,
+                             sre_index)) {
+          @Override
+          void parse_line (MatchResult m) {
+            /* for now, don't do anything with the extra info 
+             * over AS AS format
+             */
+            N from_as = labeler.node (m.group (1));
+            N to_as = labeler.node (m.group (2));
+
+            debug.printf ("setting %s (%s) to %s (%s)\n",
+                         from_as, m.group (1), to_as, m.group (2));
+
+            network.remove (from_as, to_as);
+            network.set (from_as, to_as, labeler.edge (from_as, to_as));
+          }
+        }
+      };
+  }
+
   Graph<N,E> network;
   as_graph_reader.labeler<N,E> labeler = null;
   
@@ -35,7 +111,6 @@ public class as_graph_reader<N,E> {
     public N node (String node);
   }
   
-
   public void close () throws IOException {
     if (pb != null)
       pb.close ();
@@ -89,68 +164,25 @@ public class as_graph_reader<N,E> {
     this.labeler = labeler;
   }
   
-  private void parse_line_as_as (MatchResult m) {
-    N from_as = labeler.node (m.group (1));
-    N to_as = labeler.node (m.group (2));
-    
-    debug.printf ("setting %s (%s) to %s (%s)\n",
-                 from_as, m.group (1), to_as, m.group (2));
-    
-    network.remove (from_as, to_as);
-    network.set (from_as, to_as, labeler.edge (from_as, to_as));
-  }
-  
-  private void parse_line_as_latency (MatchResult m) {
-    /*N from_as = labeler.node (Integer.toString (scr.nextInt ()));
-    @SuppressWarnings ("unused")
-    double from_as_latency = scr.nextDouble ();
-    scr.
-    while (scr.hasNext ()) {
-      if (scr.findInLine (aslatency) == null)
-        throw new InputMismatchException ("Bad AS-Latency input");*/
-      
-    N from_as = labeler.node (m.group (1));
-    @SuppressWarnings ("unused")
-    double from_as_latency = Double.parseDouble (m.group (2));
-    
-    for (int i = 3; i < m.groupCount (); i++) {
-      //MatchResult m = scr.match ();
-      N to_as = labeler.node (m.group (i));
-      double to_as_latency = Double.parseDouble (m.group (i + 1));
-      E newlabel = labeler.edge (from_as, to_as, to_as_latency);
-      
-      debug.printf ("setting %s to %s\n", from_as, to_as);
-      
-      try {
-        network.remove (from_as, to_as);
-        network.set (from_as, to_as, newlabel);
-      } catch (UnsupportedOperationException e) {
-        debug.printf (debug.levels.ERROR, "Error setting %s -> %s (%f): %s\n",
-                      from_as, to_as, to_as_latency, e.getMessage ());
-        debug.printf (debug.levels.ERROR, "While parsing: %s\n", m.group (0));
-      }
-    }
-  }
-  
   public void parse_line (String line) {
-    //debug.printf ("%s\n%s\n", aslatencyform, asasform);
     Matcher res;
     
-    debug.println ("Parsing line: " + line);
-    
-    if ((res = aslatencyform.matcher (line)).matches ())
-      parse_line_as_latency (res);
-    else if ((res = asasform.matcher (line)).matches ())
-      parse_line_as_as (res);
-    else {
-      //scr.findInLine (Pattern.compile (""));
-      throw new InputMismatchException ("Unrecognised input: "
-                                        + line);
+    debug.println ("Parsing line:\n" + line);
+
+    for (acceptpattern ap : acceptpatterns) {
+      debug.println ("Try match: " + ap.re.pattern ());
+      if ((res = ap.re.matcher (line)).matches ()) {
+        ap.parse_line (res);
+        debug.printf ("matched: %s\n", res.group (0));
+        return;
+      }
     }
-    debug.printf ("matched: %s\n", res.group (0));
+    throw new InputMismatchException ("Unrecognised input: "
+                                      + line);
   }
   
   public void parse () throws IOException {
+    init_acceptpatterns ();
     while (scr.hasNextLine ())
       parse_line (scr.nextLine ());
     close ();
