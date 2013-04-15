@@ -16,6 +16,31 @@ import java.util.zip.GZIPInputStream;
 import org.nongnu.multigraph.Graph;
 import org.nongnu.multigraph.debug;
 
+/**
+ * Parse graphs given in the format "ID ID ...", often used by Internet
+ * researchers to specify "AS graphs".
+ * Supported formats are:
+ *
+ * 1. AS AS format:
+ *    <from AS number> <to AS number>
+ *
+ * 2. UCLA IRL "links" file format:
+ *    <from ASN> <to ASN> <first seen> <last seen> <index in AS_GRAPH>
+ *    The last 3 parameters are ignored for now, but should be integers.
+ *
+ * 3. AS-latency list format:
+ *    <from ASN> <from ASN internal latency> [<to ASN> <edge latence>]*
+ *    The internal latency is ignored. The edge latency will be passed to the
+ *    users edge labeler. The latencies must be specified with a decimal
+ *    separator, even if they are whole numbers, e.g. "1.0", not "1".
+ *
+ * The format to use to parse the file with is selected automatically according
+ * to the first line in the file. You can not mix formats within a file.
+ *
+ * @author Paul Jakma
+ * @param <N> Node type
+ * @param <E> Edge type.
+ */
 public class as_graph_reader<N,E> {
   FileInputStream fis = null;
   PushbackInputStream pb = null;
