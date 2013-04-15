@@ -38,64 +38,25 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     private long ticks;
     public long get_ticks () { return ticks; }
   }
+
+  /**
+   * Hook for concrete implementations, to allow Host object
+   * to be retrieved, and possibly created, for any given Id.
+   * @param Long id of the host
+   * @return Existing or new H host object for the given Id.
+   */
   protected abstract H get_host (Long id);
-  
-  /* map Graph node objects to stable, persistent IDs that protocols can use */
-  private class idmap<N> {
-    Map<Long,N> id2simh = new HashMap<Long,N> ();
-    Map<N,Long> simh2id = new HashMap<N,Long> ();
-    
-    synchronized public Long get (N n) {
-      if (n == null)
-        throw new AssertionError ("idmap: node must not be null!");
-      
-      return simh2id.get (n);
-    }
-    
-    synchronized public void put (Long l, N n) {
-      if (n == null)
-        throw new AssertionError ("idmap put: node must not be null!");
-      if (l == null)
-        throw new AssertionError ("idmap put: Long key must not be null!");
-      
-      if (id2simh.get (l) != null)
-        throw new AssertionError ("idmap put: Long key already exists!");
-      if (simh2id.get (n) != null)
-        throw new AssertionError ("idmap put: Node already registered!");
-      
-      if (id2simh.put (l, n) != null)
-        throw new AssertionError ("id already exists, impossible, wtf?" + l);
-      
-      simh2id.put (n, l);
-      
-      return;
-    }
-    synchronized public N get (Long l) {
-      return id2simh.get (l);
-    }
-    
-    synchronized public String toString () {
-      StringBuilder sb = new StringBuilder ();
-      for (N s : simh2id.keySet ()) {
-        sb.append (s);
-        sb.append (" -> ");
-        sb.append (get (s));
-        sb.append (" (back?: ");
-        sb.append (id2simh.containsKey (get(s)));
-        sb.append (")\n");
-      }
-      return sb.toString ();
-    }
-  }
   
   public void new_node (Long id, H s) {
     idmap.put (id, s);
   }
   
+  @Override
   public Long node2id (H s) {
     return idmap.get (s);
   }
   
+  @Override
   public H id2node (Long l) {
     return idmap.get (l);
   }
@@ -341,6 +302,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     return edge.label ().get (idmap.get (from)). offer (data);
   }
   
+  @Override
   final public void update (Observable o, Object arg) {
     debug.printf ("update, in setup: %s, object: %s\n",
                   doing_network_setup, ((H) null));
