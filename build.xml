@@ -1,4 +1,6 @@
 <project name="kcoresim" default="compile">
+    <property file="${user.home}/.ant.global.properties"/>
+    <property file="build.properties"/>
 
     <property name="src.dir"     value="src"/>
     <property name="build.dir"   value="build"/>
@@ -11,18 +13,82 @@
     <property name="agarnet.jar"   value="${agarnet.dir}/${jar.dir}/agarnet.jar"/>
     <property name="getopt.jar" value="lib/gnu-getopt.jar"/>
 
-    <target name="clean">
+    <path id="project.class.path">
+        <pathelement location="${multigraph.jar}"/>
+        <pathelement location="${agarnet.jar}"/>
+        <pathelement location="${getopt.jar}"/>
+    </path>
+    
+    <target name="clean" description="Clean built files">
         <delete dir="build"/>
     </target>
 
-    <target name="compile">
+    <target name="compile" description="Compile ${ant.project.name}">
         <mkdir dir="${classes.dir}"/>
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" source="1.6">
-          <classpath>
-            <pathelement location="${multigraph.jar}"/>
-            <pathelement location="${agarnet.jar}"/>
-            <pathelement location="${getopt.jar}"/>
-          </classpath>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" source="1.6"
+               debug="${compile.debug}" debuglevel="${compile.debug.level}"
+               fork="${compile.fork}">
+          <compilerarg compiler="modern" value="-Xlint"/>
+          <classpath refid="project.class.path"/>
         </javac>
+    </target>
+
+    <target name="jar" depends="compile" description="Build JAR file">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar"
+             basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="kcoresim.kcoresim"/>
+            </manifest>
+        </jar>
+    </target>
+    
+    <target name="run" depends="jar" 
+            description="Run, with args set from the runtime.args property">
+    	<java classname="${ant.project.name}.${ant.project.name}"
+    	      fork="true">
+	   <jvmarg line="${runtime.jvmargs}"/>
+	   <arg line="${runtime.args}"/>
+    	   <classpath>
+    	     <path refid="project.class.path"/>
+    	     <pathelement location="${jar.dir}/${ant.project.name}.jar"/>
+    	   </classpath>
+    	</java>
+    </target>
+    
+    <target name="profile" depends="jar" description="Profile Project">
+      <fail unless="netbeans.home">
+        This target can only run inside theNetBeans IDE.</fail>
+                        
+      <nbprofiledirect>
+         <classpath><path refid="project.class.path"/> </classpath>
+      </nbprofiledirect>
+        <java classname="${ant.project.name}.${ant.project.name}"
+              fork="true">
+           <jvmarg line="${profiler.info.jvmargs.agent}"/>
+           <arg line="${runtime.args}"/>
+           <classpath>
+             <path refid="project.class.path"/>
+             <pathelement location="${jar.dir}/${ant.project.name}.jar"/>
+           </classpath>
+        </java>
+    </target>
+
+    <target name="profile-single" depends="jar" description="Profile Project">
+      <fail unless="netbeans.home">
+        This target can only run inside theNetBeans IDE.</fail>
+                        
+      <nbprofiledirect>
+         <classpath><path refid="project.class.path"/> </classpath>
+      </nbprofiledirect>
+        <java classname="${profile.class}"
+              fork="true">
+           <jvmarg line="${profiler.info.jvmargs.agent}"/>
+           <arg line="${runtime.args}"/>
+           <classpath>
+             <path refid="project.class.path"/>
+             <pathelement location="${jar.dir}/${ant.project.name}.jar"/>
+           </classpath>
+        </java>
     </target>
 </project>

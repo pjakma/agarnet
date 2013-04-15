@@ -1,8 +1,8 @@
-PROJECTHOME="/home/paul/code/"
+PROJECTHOME="/home/paul/code"
 
-CPATH="$PROJECTHOME/MultiGraph/build/classes/"
-CPATH="$CPATH:$PROJECTHOME/agarnet/build/classes/"
+CPATH="$PROJECTHOME/MultiGraph/build/classes"
+CPATH="$CPATH:$PROJECTHOME/agarnet/build/jar/agarnet.jar"
 CPATH="$CPATH:/usr/share/java/gnu.getopt.jar"
-CPATH="$CPATH:$PROJECTHOME/kcoresim/bin/"
+CPATH="$CPATH:$PROJECTHOME/kcoresim/build/jar/kcoresim.jar"
 
-java -cp $CPATH kcoresim/kcoresim $@
+java -server -classpath $CPATH kcoresim.kcoresim $@
