@@ -77,6 +77,7 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     new_node (id, s);
     return s;
   }
+  @Override
   protected simhost get_host (Long id) {
     return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
   }
@@ -85,6 +86,7 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     super (d);
   }
   
+  @Override
   protected void add_initial_hosts () {
     long num = 1;
     
@@ -262,6 +264,7 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     s.main_loop ();
   }
   
+  @Override
   protected void describe_begin () {
     super.describe_begin ();
     System.out.println ("numleeches: " + conf_leeches.get ());
@@ -281,6 +284,7 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
     }
   }
   
+  @Override
   protected boolean has_converged () {
     float f = 0;
     

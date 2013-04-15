@@ -399,6 +399,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
           final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
           final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
           final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
+          @Override
           public link<H> getLabel (H from, H to) {
             int bw = gen_rand_in_range_inc ("Bandwidth", maxbw, minbw);
             int lat = gen_rand_in_range_inc ("Latency", maxlat, minlat);
@@ -644,6 +645,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
 //    }
   }
   
+  @Override
   protected void rewire () {
     TopologyConfigOption tconf = conf_topology;
     String type = tconf.get ();
@@ -659,6 +661,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       initial_layout ();
   }
     
+  @Override
   protected void initial_setup () {
     /* file based? Then its done on each rewire */
     if (conf_topology != null && conf_topology.get () != null) {
@@ -713,12 +716,9 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         debug.invert (true);
       
     }
-    
-    /*System.out.printf ("debug level: %s, pushlevel %s\n",
-                       debug.level ().name (),
-                       debug.pushlevel ().name ());*/
   }
 
+  @Override
   protected void describe_begin () {
     debug.printf ("Network: %s\n", network);
     debug.printf ("idmap:\n%s", idmap);
@@ -781,6 +781,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     System.out.println ("Diameter: " + stats.get ("diameter").intValue ());
   }
   
+  @Override
   protected void describe_end () {
     if (debug.applies ())
       describe_links ();
