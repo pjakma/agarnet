@@ -19,6 +19,7 @@ import agarnet.protocols.host.AnimatableHost;
 public class simhost extends AnimatableHost<Long, simhost>
                      implements kshell_node {
   private int maxdegree;
+  private final int protocol_index;
 
   /* for globalkcore */
   private kshell_node_data gkc = new kshell_node_data ();
@@ -39,8 +40,9 @@ public class simhost extends AnimatableHost<Long, simhost>
   }
 
   public simhost (Simulation<Long,simhost> simapp,
-                  protocol<Long> [] pcols) {
+                  protocol<Long> [] pcols, int index) {
     super (simapp, true, pcols);
+    protocol_index = index;
   }
   
   @Override
@@ -55,15 +57,29 @@ public class simhost extends AnimatableHost<Long, simhost>
                + "g: " + gkc.k + ", "
                + ((gkc.removed) ? "removed" : "")
                + (gkc.k == 0 || (stat_get (stat.stored) == gkc.k) ? ""
-                                                    : (" - mismatch! " + debug_kcore () ))
+                                                    : (" - mismatch! " ))
          + ")";
+  }
+  
+  public String kcorestring () {
+    return ((kcore<simhost>)(host.protocols ()[protocol_index])).toString ();
+  }
+  public int kbound () {
+    return ((kcore<simhost>)(host.protocols ()[protocol_index])).kbound;
+  }
+  public long kgen () {
+    return ((kcore<simhost>)(host.protocols ()[protocol_index])).generation;
+  }
+  public long degree () {
+    return ((kcore<simhost>)(host.protocols ()[protocol_index])).connected.size ();
   }
   
   private int debug_kcore () {
     debug.levels dl = debug.level ();
     debug.level (debug.levels.DEBUG);
     
-    int kbound = ((kcore<simhost>)(host.protocols ()[0])).calc_kbound ();
+    int kbound
+      = ((kcore<simhost>)(host.protocols ()[protocol_index])).calc_kbound ();
     
     debug.level (dl);
     
