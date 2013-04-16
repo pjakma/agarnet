@@ -5,9 +5,11 @@ import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 
 import java.awt.Color;
+import java.io.Serializable;
 
-public abstract class AnimatableHost<I,N> extends PositionableHost<I,N>
-                                 implements Coloured {
+public abstract class AnimatableHost<I extends Serializable,N>
+                extends PositionableHost<I,N>
+                implements Coloured {
   protected AnimatableHost () {}
   public AnimatableHost (Simulation<I,N> sim,
                            boolean movable, 

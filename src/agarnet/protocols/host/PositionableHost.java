@@ -5,9 +5,11 @@ import org.nongnu.multigraph.layout.AbstractPositionableNode;
 import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_stats;
+import java.io.Serializable;
 
-public class PositionableHost<I,N> extends AbstractPositionableNode
-                                   implements protocol<I> {
+public class PositionableHost<I extends Serializable,N>
+       extends AbstractPositionableNode
+       implements protocol<I> {
   protected host<I,N> host;
   private boolean movable = true;
   protected Simulation<I,N> sim;

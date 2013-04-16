@@ -37,6 +37,9 @@ import org.nongnu.multigraph.debug;
  * The format to use to parse the file with is selected automatically according
  * to the first line in the file. You can not mix formats within a file.
  *
+ * The input file may be GZip compressed, it will be automatically decompressed
+ * on the fly.
+ *
  * @author Paul Jakma
  * @param <N> Node type
  * @param <E> Edge type.
@@ -61,7 +64,9 @@ public class as_graph_reader<N,E> {
   private void init_acceptpatterns () {
       acceptpatterns = new acceptpattern []{
         /* "ASN internal_latency [to_ASN_edge latency]+" format */
-        new acceptpattern ("("+sre_asn+")\\s(" +sre_double+ ")\\s(" +sre_aslatency+ ")*\\s*$") {
+        new acceptpattern<N,E> ("("+sre_asn+")\\s("
+                                   +sre_double+ ")\\s("
+                                   +sre_aslatency+ ")*\\s*$") {
           @Override
           void parse_line (MatchResult m) {
             N from_as = labeler.node (m.group (1));
@@ -88,7 +93,7 @@ public class as_graph_reader<N,E> {
           }
         },
         /* "ASN ASN" format */
-        new acceptpattern ("("+sre_asn+")\\s+("+sre_asn+")\\s*") {
+        new acceptpattern<N,E> ("("+sre_asn+")\\s+("+sre_asn+")\\s*") {
           @Override
           void parse_line (MatchResult m) {
             N from_as = labeler.node (m.group (1));
@@ -105,7 +110,7 @@ public class as_graph_reader<N,E> {
          * "ASN to_AS first_seen last_seen AS_PATH_pos"
          * timestamps are unix format.
          */
-        new acceptpattern (String.format
+        new acceptpattern<N,E> (String.format
                            ("(%s)\\s+(%s)\\s+(%s)\\s+(%s)\\s+(%s)\\s*",
                              sre_asn, sre_asn, sre_tstamp, sre_tstamp,
                              sre_index)) {
@@ -129,7 +134,12 @@ public class as_graph_reader<N,E> {
 
   Graph<N,E> network;
   as_graph_reader.labeler<N,E> labeler = null;
-  
+
+  /**
+   * Interface for an edge labeler object, which the user must supply to the
+   * constructor of this class, allowsing the creation of edges to be
+   * delegated back to the user.
+   */
   public interface labeler<N,E> {
     public E edge (N from, N to, double latency);
     public E edge (N from, N to);
@@ -194,7 +204,7 @@ public class as_graph_reader<N,E> {
     
     debug.println ("Parsing line:\n" + line);
 
-    for (acceptpattern ap : acceptpatterns) {
+    for (acceptpattern<N,E> ap : acceptpatterns) {
       debug.println ("Try match: " + ap.re.pattern ());
       if ((res = ap.re.matcher (line)).matches ()) {
         ap.parse_line (res);

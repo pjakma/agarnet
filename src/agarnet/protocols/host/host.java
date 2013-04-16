@@ -10,6 +10,7 @@ import agarnet.protocols.AbstractProtocol;
 import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_stats;
 import agarnet.protocols.protocol_stats.stat;
+import java.io.Serializable;
 
 /**
  * Class to represent a host. A host is the (slim) interface between a protocol
@@ -23,7 +24,7 @@ import agarnet.protocols.protocol_stats.stat;
  * @param <T> The type of a value the simulation uses to quickly between
  *            different kinds of hosts, for the purposes of the simulation.
  */
-public class host<I,N> extends AbstractProtocol<I> {
+public class host<I extends Serializable,N> extends AbstractProtocol<I> {
   protected protocol<I> [] protocols;
   Simulation<I,N> sim;
   
