@@ -79,7 +79,8 @@ public class host<I extends Serializable,N> extends AbstractProtocol<I> {
     if (cpu > 0)
       cpu--;
     
-    debug.printf ("host %s: send down msg to %s\n", selfId, dst);
+    //debug.printf ("host %s: send down msg to %s\n", selfId, dst);
+    
     sim.tx (selfId, dst, data);
     stats_inc (stat.sent);
     _check_ids ();
@@ -103,7 +104,7 @@ public class host<I extends Serializable,N> extends AbstractProtocol<I> {
     if (protocols.length == 0)
       return;
     
-    debug.printf ("host %s: send up msg from %s\n", selfId, msg.src);
+    //debug.printf ("host %s: send up msg from %s\n", selfId, msg.src);
     
     above.up (msg.src, msg.data);
     stats_inc (protocol_stats.stat.recvd);
