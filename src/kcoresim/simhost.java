@@ -8,6 +8,8 @@ import org.nongnu.multigraph.structure.kshell_node_data;
 
 import agarnet.framework.Simulation;
 import agarnet.protocols.protocol;
+import agarnet.protocols.protocol_logical_clock;
+
 import agarnet.protocols.host.AnimatableHost;
 
 /* This is a host type for:
@@ -19,8 +21,9 @@ import agarnet.protocols.host.AnimatableHost;
 public class simhost extends AnimatableHost<Long, simhost>
                      implements kshell_node {
   private int maxdegree;
-  private final int protocol_index;
-
+  private kcore<simhost> kcore_protocol = null;
+  private protocol_logical_clock<Long> lc_proto = null;
+  
   /* for globalkcore */
   private kshell_node_data gkc = new kshell_node_data ();
   public kshell_node_data gkc () {
@@ -40,9 +43,17 @@ public class simhost extends AnimatableHost<Long, simhost>
   }
 
   public simhost (Simulation<Long,simhost> simapp,
-                  protocol<Long> [] pcols, int index) {
+                  protocol<Long> [] pcols) {
     super (simapp, true, pcols);
-    protocol_index = index;
+    
+    for (int i = 0; i < pcols.length; i++) {
+      if (pcols[i] instanceof kcore<?>)
+        kcore_protocol = (kcore<simhost>) pcols[i];
+      if (pcols[i] instanceof protocol_logical_clock<?>)
+        lc_proto = (protocol_logical_clock<Long>) pcols[i];
+    }
+    if (kcore_protocol == null)
+      throw new java.lang.IllegalArgumentException ("kcore protocol required in the stack.");
   }
   
   @Override
@@ -62,24 +73,26 @@ public class simhost extends AnimatableHost<Long, simhost>
   }
   
   public String kcorestring () {
-    return ((kcore<simhost>)(host.protocols ()[protocol_index])).toString ();
+    return kcore_protocol.toString ();
   }
   public int kbound () {
-    return ((kcore<simhost>)(host.protocols ()[protocol_index])).kbound;
+    return kcore_protocol.kbound;
   }
   public long kgen () {
-    return ((kcore<simhost>)(host.protocols ()[protocol_index])).generation;
+    return kcore_protocol.generation;
   }
   public long degree () {
-    return ((kcore<simhost>)(host.protocols ()[protocol_index])).connected.size ();
+    return kcore_protocol.connected.size ();
   }
   
+  public long logical_time () {
+    return lc_proto != null ? lc_proto.time () : -1;
+  }
   private int debug_kcore () {
     debug.levels dl = debug.level ();
     debug.level (debug.levels.DEBUG);
     
-    int kbound
-      = ((kcore<simhost>)(host.protocols ()[protocol_index])).calc_kbound ();
+    int kbound = kcore_protocol.calc_kbound ();
     
     debug.level (dl);
     

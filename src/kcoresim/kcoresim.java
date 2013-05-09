@@ -24,6 +24,7 @@ import agarnet.framework.AbstractCliApp;
 import agarnet.link.*;
 import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_srtp;
+import agarnet.protocols.protocol_logical_clock;
 import agarnet.protocols.protocol_stats.stat;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
@@ -46,10 +47,12 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_kcore () {
     return conf_srtp.get () ? new protocol [] {
-                                new protocol_srtp<Long> (),
+                                new protocol_srtp<> (),
+                                new protocol_logical_clock<> (),
                                 new kcore<simhost> (this),
                               }
                             : new protocol [] {
+                                new protocol_logical_clock<> (),
                                 new kcore<simhost> (this),
                             };
   }
@@ -62,8 +65,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     = new ArrayList<Edge<simhost,link<simhost>>> ();
   
   private simhost get_host (Long id, protocol<Long> [] protos) {
-    simhost s = new simhost (this, protos.clone (), 
-                             (conf_srtp.get () ? 1 : 0));
+    simhost s = new simhost (this, protos.clone ());
     s.setId (id);
     new_node (id, s);
     return s;
@@ -88,7 +90,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
         "nodes", 'p', "<number>",
         "number of nodes to create",
         LongOpt.REQUIRED_ARGUMENT, 1, Integer.MAX_VALUE)
-        .set (10);
+        .set (9);
   
   final static SuboptConfigOption conf_perturb
   = new SuboptConfigOption (
@@ -114,7 +116,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
         "Use Simple Reliable Transport Protocol").set (false);
   public static void main(String args[]) {    
     int c;
-    LinkedList<LongOpt> lopts = new LinkedList<LongOpt> ();
+    LinkedList<LongOpt> lopts = new LinkedList<> ();
     
     /* Add kcore sim specific config-vars */
     confvars.add (conf_nodes);
@@ -268,7 +270,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
             System.out.printf ("    %s\n", e);
       }
     }
-    for (int i = 0; i < maxk; i++) {
+    for (int i = 0; i <= maxk; i++) {
       System.out.printf ("shell %2d : %d nodes%s\n", i, count[i],
                          count[i] != dcount[i] ? (" ("+ dcount[i] + ")")
                                                : "");
@@ -284,7 +286,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       }
       debug_mismatches ();
     }
-    
+    System.out.println ("kmax: " + maxk);
     System.out.println ("KDI: " + ktotaldelta);
     System.out.println ("Mismatch: " + mismatch);
   }
@@ -293,6 +295,11 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   protected void describe_end () {
     if (get_runs () > 0)
       describe_net (kshell.calc (network));
+    
+    long maxltime = 0;
+    for (simhost h : network)
+      maxltime = Math.max (maxltime, h.logical_time ());
+    System.out.println ("Logical clock: " + maxltime);
     
     super.describe_end ();
   }
