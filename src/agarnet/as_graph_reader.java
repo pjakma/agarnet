@@ -25,8 +25,14 @@ import org.nongnu.multigraph.debug;
  *    <from AS number> <to AS number>
  *
  * 2. UCLA IRL "links" file format:
- *    <from ASN> <to ASN> <first seen> <last seen> <index in AS_GRAPH>
- *    The last 3 parameters are ignored for now, but should be integers.
+ *    <from ASN> <to ASN> <first seen> <last seen> <index in AS_GRAPH> [MRT record]
+ *    
+ *    The last 4 parameters are ignored for now, but should be integers. ASNs in "ASDot"
+ *    format are accepted for this type, as they occur in the IRL dataset. 
+ *    
+ *    For bug compatibility, negative ASDots are also accepted for IRL format,
+ *    IRLs parser/output seems to turn high ASNs into ASDots with a negative first
+ *    portion.
  *
  * 3. AS-latency list format:
  *    <from ASN> <from ASN internal latency> [<to ASN> <edge latence>]*
@@ -48,23 +54,48 @@ public class as_graph_reader<N,E> {
   FileInputStream fis = null;
   PushbackInputStream pb = null;
   Scanner scr = null;
-  final String sre_double = "\\d*([.]\\d+)?";
-  final String sre_asn = "\\d+";
-  final String sre_tstamp = "\\d+";
-  final String sre_index = "\\d+";
-  final String sre_aslatency = "(" +sre_asn+ "),(" + sre_double + ")";
-
-  private abstract class acceptpattern<N,E> {
+  final static String sre_double = "\\d*([.]\\d+)?";
+  final static String sre_asn = "\\d+";
+  final static String sre_asdot = "\\d+[.]\\d+";
+  final static String sre_tstamp = "\\d+";
+  final static String sre_index = "\\d+";
+  final static String sre_mrt = "\\S+";
+  final static String sre_aslatency = "(" +sre_asn+ "),(" + sre_double + ")";
+  final static Pattern re_asdot = Pattern.compile ("(\\d+)[.](\\d+)");
+  final static Pattern re_asdot_irlbug = Pattern.compile ("(-?\\d+)[.](\\d+)");
+  private acceptpattern use_ap;
+  
+  private static abstract class acceptpattern {
     final Pattern re;
-    protected acceptpattern (String re) { this.re = Pattern.compile (re); }
+    final String name;
+    protected acceptpattern (String name, String re) {
+      this.name = name;
+      this.re = Pattern.compile (re);
+    }
     abstract void parse_line (MatchResult res);
   }
-  acceptpattern<N,E> [] acceptpatterns;
-
+  acceptpattern [] acceptpatterns;
+  
+  private String normalise_asn (String asn) {
+    Matcher res;
+    debug.println ("normalise " + asn);
+    if ((res = re_asdot_irlbug.matcher (asn)).matches ()) {
+      long high = Integer.parseInt (res.group (1));
+      /* IRL ASdot bugginess */
+      if (high < 0)
+        high += 65536;
+      int low = Integer.parseInt (res.group (2));
+      long normas = (high << 16) | low;
+      debug.println ("asdot " + asn + " hi/lo: " + (high << 16) + "/" + low + " to " + normas);
+      return String.valueOf (normas);
+    }
+    return asn;
+  }
   private void init_acceptpatterns () {
       acceptpatterns = new acceptpattern []{
         /* "ASN internal_latency [to_ASN_edge latency]+" format */
-        new acceptpattern<N,E> ("("+sre_asn+")\\s("
+        new acceptpattern ("ASN latency list",
+                           "("+sre_asn+")\\s("
                                    +sre_double+ ")\\s("
                                    +sre_aslatency+ ")*\\s*$") {
           @Override
@@ -93,7 +124,7 @@ public class as_graph_reader<N,E> {
           }
         },
         /* "ASN ASN" format */
-        new acceptpattern<N,E> ("("+sre_asn+")\\s+("+sre_asn+")\\s*") {
+        new acceptpattern ("ASN ASN", "("+sre_asn+")\\s+("+sre_asn+")\\s*") {
           @Override
           void parse_line (MatchResult m) {
             N from_as = labeler.node (m.group (1));
@@ -107,20 +138,20 @@ public class as_graph_reader<N,E> {
           }
         },
         /* IRL format:
-         * "ASN to_AS first_seen last_seen AS_PATH_pos"
+         * "ASN to_AS first_seen last_seen AS_PATH_pos [MRT record]"
          * timestamps are unix format.
          */
-        new acceptpattern<N,E> (String.format
-                           ("(%s)\\s+(%s)\\s+(%s)\\s+(%s)\\s+(%s)\\s*",
-                             sre_asn, sre_asn, sre_tstamp, sre_tstamp,
+        new acceptpattern ("IRL", String.format
+                           ("(%s|[-]?%s)\\s+(%s|[-]?%s)\\s+(%s)\\s+(%s)\\s+(%s).*$",
+                             sre_asn, sre_asdot, sre_asn, sre_asdot, sre_tstamp, sre_tstamp,
                              sre_index)) {
           @Override
           void parse_line (MatchResult m) {
             /* for now, don't do anything with the extra info 
              * over AS AS format
              */
-            N from_as = labeler.node (m.group (1));
-            N to_as = labeler.node (m.group (2));
+            N from_as = labeler.node (normalise_asn(m.group (1)));
+            N to_as = labeler.node (normalise_asn (m.group (2)));
 
             debug.printf ("setting %s (%s) to %s (%s)\n",
                          from_as, m.group (1), to_as, m.group (2));
@@ -203,21 +234,29 @@ public class as_graph_reader<N,E> {
     Matcher res;
     
     debug.println ("Parsing line:\n" + line);
-
-    for (acceptpattern<N,E> ap : acceptpatterns) {
-      debug.println ("Try match: " + ap.re.pattern ());
-      if ((res = ap.re.matcher (line)).matches ()) {
-        ap.parse_line (res);
-        debug.printf ("matched: %s\n", res.group (0));
-        return;
+    
+    if (use_ap == null) {
+      for (acceptpattern ap : acceptpatterns) {
+        debug.println ("Try " + ap.name + ": " + ap.re.pattern ());
+        if (ap.re.matcher (line).matches ()) {
+          use_ap = ap;
+          return;
+        }
       }
     }
-    throw new InputMismatchException ("Unrecognised input: "
-                                      + line);
+    
+    if (use_ap != null && (res = use_ap.re.matcher (line)).matches ()) {
+      debug.printf ("matched: %s\n", res.group (0));
+      use_ap.parse_line (res);
+    } else {
+      throw new InputMismatchException ("Unrecognised input: "
+                                        + line);
+    }
   }
   
   public void parse () throws IOException {
     init_acceptpatterns ();
+    
     while (scr.hasNextLine ())
       parse_line (scr.nextLine ());
     close ();
