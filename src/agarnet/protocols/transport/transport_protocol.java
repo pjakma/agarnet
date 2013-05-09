@@ -11,8 +11,6 @@ import org.nongnu.multigraph.debug;
 import agarnet.data.marshall;
 import agarnet.framework.Simulation;
 import agarnet.protocols.AbstractProtocol;
-import agarnet.protocols.protocol;
-import agarnet.protocols.protocol_stats.stat;
 import agarnet.protocols.transport.data.message;
 import agarnet.protocols.transport.data.packet_header;
 
@@ -55,8 +53,8 @@ public class transport_protocol<I,N,L>
     /* should it be received locally? */
     if (dst == null || dst.equals (selfId)) {
       debug.printf ("transport %s: send up msg from %s (%s)\n", selfId,
-                    msg.getHeader ().getSrc (), linksrc);
-      above.up (msg.getHeader ().getSrc (), msg.getData ());
+                    src, linksrc);
+      above.up (src, msg.getData ());
     }
   }
   
@@ -118,23 +116,6 @@ public class transport_protocol<I,N,L>
     debug.printf ("dst2nexthop: %s -> %s\n", dst, nhops);
     
     return nhops;
-  }
-  
-  @Override
-  public void insert (protocol<I> above, protocol<I> below) {
-    super.insert (above, below);
-  }
-
-  @Override
-  public void reset () {
-    super.reset ();
-  }
-
-  @Override
-  public protocol<I> setId (I id) {
-    super.setId (id);
-    
-    return this;
   }
   
   private void _update_spf () {
