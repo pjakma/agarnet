@@ -1,19 +1,27 @@
 package agarnet.framework;
 
 import java.awt.Dimension;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 
+import org.nongnu.multigraph.Graph;
 import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.SimpleGraph;
 import org.nongnu.multigraph.debug;
+import org.nongnu.multigraph.PartitionGraph;
+import org.nongnu.multigraph.PartitionGraph.PartitionCallbacks;
 
 import agarnet.link.link;
+import agarnet.link.unilink;
 import agarnet.protocols.host.PositionableHost;
+
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 
 /**
  * An abstract simulation, implementing a framework for a simulation using Long
@@ -29,8 +37,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
 				implements Observer {
   /* so we can ignore observer events initially */
   protected boolean doing_network_setup = true;
-  protected idmap<H> idmap = new idmap<H> ();
+  protected idmap<H> idmap = new sync_idmap<H> ();
   protected sim_stats sim_stats = new sim_stats ();
+  private PartitionGraph<H,link<H>> partition_graph;
   
   protected class sim_stats {
     private long messages_sent = 0;
@@ -78,8 +87,34 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     return get_host (l);
   }
   
+  static private class order_partition<N,E> implements PartitionCallbacks<N,E> {
+    private int count = 0;
+    private int num = Math.max (Runtime.getRuntime ().availableProcessors () - 2, 1);;
+    private Map<N,Integer> map = new HashMap<> ();
+
+    @Override
+    public Graph<N,E> create_graph () {
+      return new SimpleGraph<> ();
+    }
+
+    @Override
+    public int num_partitions () {
+      return num;
+    }
+
+    @Override
+    public int node2partition (N n) {
+      if (map.containsKey (n))
+        return map.get (n);
+      int partition = count;
+      count = (count + 1) % num;
+      map.put (n, partition);
+      return partition;
+    }
+  }
   public AbstractLongSim (Dimension d) {
-    super (new SimpleGraph<H,link<H>> (), d);
+    super (new PartitionGraph<H,link<H>> (new order_partition<H,link<H>> ()), d);
+    partition_graph = (PartitionGraph<H, link<H>>) network;
     network.addObserver (this);
   }
   
@@ -108,10 +143,66 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   protected void initial_setup () {
     add_initial_hosts ();
   }
+
+  
+
+  private class partition_runner extends Thread {
+    Set<H> partition;
+    final synchronisation_gate nodeg, edgeg;
+    final int pid;
+
+    partition_runner (int id, Set<H> partition,
+                      synchronisation_gate nodeg,
+                      synchronisation_gate edgeg) {
+      this.nodeg = nodeg;
+      this.edgeg = edgeg;
+      this.partition = partition;
+      this.pid = id;
+    }
+    @Override
+    public String toString () {
+      return String.format ("partition(id: %d, tid: %d, size: %d %s / %s)",
+                            pid, Thread.currentThread ().getId (),
+                            partition.size (), nodeg, edgeg);
+    }
+    @Override
+    public void run () {
+      
+      while (true) {
+        nodeg.wait_ready ();
+        for (final H n : partition) {
+          n.tick ();
+          debug.printf ("%s: tick node %s\n", this, n);
+        }
+        
+        edgeg.wait_ready ();
+        for (final H n : partition) {
+          debug.printf ("%s: ticking edges of %s\n", this, n);
+          tick_edges_of (n);
+        
+        }
+      }
+    }
+  }
+
+  List<partition_runner> partition_runners = new LinkedList<> ();
+  synchronisation_gate node_gate;
+  synchronisation_gate edge_gate;
   
   final public void main_loop () {
     debug.println ("initial setup");
     network.plugObservable ();
+
+    node_gate = new synchronisation_gate (partition_graph.partitions () + 1);
+    edge_gate = new synchronisation_gate (partition_graph.partitions () + 1);
+    for (int i = 0; i < partition_graph.partitions (); i++) {
+      Set<H> partition = partition_graph.partition (i);
+      partition_runner pr = new partition_runner (i, partition, node_gate, edge_gate);
+      partition_runners.add (pr);
+      pr.start ();
+      debug.println ("started partition " + pr);
+    }
+
     initial_setup ();
     
     doing_network_setup = false;
@@ -147,6 +238,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       if (runs == 0)
         runs--;
     }
+
+    for (final partition_runner pr : partition_runners)
+      pr.stop ();
   }
   
   private static class recent_activity {
@@ -207,7 +301,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   abstract protected void perturb ();
   
   /* the main loop of the simulation */
-  final void run () {
+  protected void run () {
     sim_stats.ticks = 0;
     sim_stats.messages_sent = 0;
     recent_activity ra_link = new recent_activity (get_period (), true);
@@ -218,35 +312,17 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       /* Links have to be ticked over separately from nodes, otherwise
        * a message might get across multiple nodes and links in just one tick. 
        */
-      Iterable<H> netiter
-        = this.get_random_tick () ? network.random_node_iterable ()
-                                  : network;
+      //Iterable<H> netiter
+      //  = this.get_random_tick () ? network.random_node_iterable ()
+      //                            : network;
       
-      for (H p : netiter)
-        for (Edge<H,link<H>> e : network.edges (p)) {
-          e.label ().get (p).tick ();
-        }
+      debug.println ("queue nodes");
+      node_gate.wait_ready ();
       
+      debug.println ("queue links");
+      edge_gate.wait_ready ();
       /* now tick the nodes and deliver any messages to them */
-      for (H p : netiter) {
-        p.tick ();
-        
-        for (Edge<H,link<H>> e : network.edges (p)) {          
-          /* dequeue from the link to the connected peer */
-          byte [] data;
-          
-          if (e.label ().size () > 0)
-            setChanged ();
-          
-          while ((data = e.label ().get (p).poll ()) != null) {
-            e.to ().up (idmap.get (p), data);
-          }
-        }
-        
-        if (p.hasChanged ())
-          setChanged ();
-      }
-      
+
       perturb ();
       
       ra_link.set (this.hasChanged ());
@@ -288,9 +364,33 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     return ids;
   }
   
+  private void tick_edges_of (H h) {
+    for (Edge<H,link<H>> e : network.edges (h)) {
+      debug.printf ("%s: edge %s\n", h, e);
+      byte [] data;
+
+      unilink<H> ul = e.label ().get (h);
+      
+      if (e.label ().size () > 0)
+        setChanged ();
+      
+      ul.tick ();
+      
+      /* dequeue from the link */
+      while ((data = ul.poll ()) != null) {
+        //debug.out.printf ("dequeue from %s up to %s, edge: %s\n", e.to (), h, e);
+        h.up (idmap.get (e.to ()), data);
+      }
+    }
+  }
+  
   @Override
   final public boolean tx (Long from, Long to, byte [] data) {
-    Edge<H, link<H>> edge = network.edge (idmap.get (from), idmap.get (to));
+    H hfrom = idmap.get (from);
+    H hto = idmap.get (to);
+    Edge<H, link<H>> edge = network.edge (hfrom, hto);
+    
+    //debug.out.printf ("tx %d to %d, edge: %s\n", from, to, edge);
     
     if (edge == null) {
       debug.printf (debug.levels.ERROR, "tx called for non-existent edge %s -> %s!",
@@ -299,7 +399,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     }
     sim_stats.messages_sent++;
     
-    return edge.label ().get (idmap.get (from)). offer (data);
+    return edge.label ().get (hto). offer (data);
   }
   
   @Override

@@ -129,7 +129,7 @@ public class unilink<I> extends abstract_tickable
    * NB, we don't implement the Queue i'face cause it drags in all the
    * Collections interface methods. 
    */
-  public boolean offer (byte [] data) {
+  public synchronized boolean offer (byte [] data) {
     boolean ret = false;
 
     if (data.length + buffered > capacity)
@@ -148,11 +148,11 @@ public class unilink<I> extends abstract_tickable
     return ret;
   }
   
-  public byte [] peek () {
+  public synchronized byte [] peek () {
     return rxbuf.peek ();
   }
   
-  public byte [] poll () {
+  public synchronized byte [] poll () {
     _sanity_check_buffered ();
     
     byte [] data = rxbuf.poll ();
@@ -166,7 +166,7 @@ public class unilink<I> extends abstract_tickable
   }
   
   @Override
-  public void reset () {
+  public synchronized void reset () {
     _sanity_check_buffered ();
     txbuf.clear ();
     rxbuf.clear ();
@@ -174,7 +174,7 @@ public class unilink<I> extends abstract_tickable
     _sanity_check_buffered ();
   }
   
-  public int size () {
+  public synchronized int size () {
     _sanity_check_buffered ();
     return buffered;
   }
@@ -227,7 +227,7 @@ public class unilink<I> extends abstract_tickable
   }
   
   @Override
-  public void tick () {
+  public synchronized void tick () {
     _sanity_check_buffered ();
     
     linkq_to_rx ();    
@@ -240,12 +240,13 @@ public class unilink<I> extends abstract_tickable
   }
   
   @Override
-  public String toString () {
+  public synchronized String toString () {
     _sanity_check_buffered ();
-    return "ul: " + id.toString () + " bw/lat/buf: " + bandwidth + "/" + latency
+    return "ul(" + id.toString () + " bw/lat/buf: " + bandwidth + "/" + latency
            + "/" + buffered
            + " tx/l/rx q: " + _bytes_in_queue (txbuf)
                             + "/" + _bytes_in_linkq ()
-                            + "/" + _bytes_in_queue (rxbuf);
+                            + "/" + _bytes_in_queue (rxbuf)
+           + ")";
   }
 }

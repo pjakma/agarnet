@@ -31,6 +31,6 @@ public class link<I> implements resetable {
   }
   
   public String toString () {
-    return "link: " + ul1 + ", " + ul2;
+    return "link(" + ul1 + ", " + ul2 + ")";
   }
 }
