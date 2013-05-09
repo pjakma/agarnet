@@ -1,6 +1,10 @@
 package agarnet.variables;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
+import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 import agarnet.Subopt;
 import agarnet.variables.atoms.*;
@@ -115,6 +119,42 @@ public abstract class ConfigurableOption {
       }
     }
     return sb.toString ();
+  }
+  
+  /**
+   * Handle command line argument parsing with the given...
+   * 
+   * @param name
+   * @param g
+   */
+  public static int getopts (String name, String [] args, List<ConfigurableOption> confvars) {
+    int c;
+    LinkedList<LongOpt> lopts = new LinkedList<LongOpt> ();
+    Map<Integer, ConfigurableOption> char2opt = new HashMap<> ();
+    
+    for (ConfigurableOption cv : confvars) {
+      lopts.add (cv.lopt);
+      char2opt.put (cv.lopt.getVal (), cv);
+    }
+    
+    Getopt g = new Getopt(name, args, ConfigurableOption.get_optstring (confvars),
+                          lopts.toArray (new LongOpt [0]));
+    while ((c = g.getopt ()) != -1) {
+      if (c == '?')
+        return g.getOptopt ();
+      
+      ConfigurableOption cv = char2opt.get (c);
+      
+      if (cv == null)
+        return -1;
+      
+      cv.getopt (g);
+    }
+    return 0;
+  }
+  
+  public void getopt (Getopt g) {
+    parse (g.getOptarg ());
   }
   
   protected void parse_subopts (ConfigOptionSet subopts,

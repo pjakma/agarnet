@@ -1,6 +1,7 @@
 package agarnet.variables;
 
 import agarnet.variables.atoms.IntVar;
+import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
 /**
@@ -13,7 +14,7 @@ public class IntConfigOption extends ConfigurableOption {
   
   /**
    *
-   * Integer configuration variable, with the specified min and max range.
+   * Integer configuration variable
    * 
    * @param longOption the long option name for the variable
    * @param shortOption A single character short option for the variable

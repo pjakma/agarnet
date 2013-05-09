@@ -1,5 +1,6 @@
 package agarnet.variables;
 
+import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
 public class BooleanConfigOption extends ConfigurableOption {
@@ -26,5 +27,10 @@ public class BooleanConfigOption extends ConfigurableOption {
   @Override
   public ConfigurableOption parse (String arg) {
     return this;
+  }
+
+  @Override
+  public void getopt (Getopt g) {
+    set (true);
   }
 }
