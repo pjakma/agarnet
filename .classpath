@@ -2,7 +2,9 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/agarnet"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/Multigraph"/>
+	<classpathentry kind="lib" path="/Multigraph/build/jar/MultiGraph.jar" sourcepath="/Multigraph/src"/>
+	<classpathentry kind="lib" path="/agarnet/build/jar/agarnet.jar" sourcepath="/agarnet/src"/>
+	<classpathentry kind="lib" path="/agarnet/lib/gnu-getopt.jar"/>
+	<classpathentry kind="src" path="/agarnet"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
