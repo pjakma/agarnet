@@ -144,7 +144,7 @@ public class peer<I,N> extends AbstractProtocol<I>
   }
   protected void send (I to, file msg) {    
     debug.printf ("peer %s: send %s to %s\n", this, msg, to);
-    send (to, (Object) msg);
+    send (to, msg);
   }
   
   @Override

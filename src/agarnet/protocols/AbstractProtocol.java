@@ -113,10 +113,10 @@ public abstract class AbstractProtocol<N>
    * @param to Destination node
    * @param msg Message object to serialise and send.
    */
-  protected void send (N to, Object msg) {
+  protected void send (N to, agarnet.serialisable msg) {
     byte [] data;
     try {
-      data = marshall.serialise (msg);
+      data = msg.serialise ();
     } catch (IOException e) {
       debug.println ("Weird, couldn't serialise message!");
       e.printStackTrace();

@@ -25,7 +25,7 @@ import agarnet.data.marshall;
  * @param <N>
  */
 public class protocol_srtp<N extends Serializable> extends AbstractProtocol<N> {
-  static public class srtp_msg<N> implements Serializable, Externalizable {
+  static public class srtp_msg<N> implements Serializable, Externalizable, agarnet.serialisable {
     private static final long serialVersionUID = 3047384440150564207L;
     N src;
     N dst;
@@ -77,8 +77,11 @@ public class protocol_srtp<N extends Serializable> extends AbstractProtocol<N> {
                             src, dst, seq, ack,
                             (data != null ? data.length : 0));
    }
-    
-    
+
+    @Override
+    public byte [] serialise () throws IOException {
+      return marshall.serialise (this);
+    }
   }
   
   class neighbour<I> {

@@ -1,14 +1,13 @@
 package agarnet.protocols;
 
-import java.io.Externalizable;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.io.Serializable;
 
 import org.nongnu.multigraph.debug;
-
-import agarnet.data.marshall;
 
 public class protocol_logical_clock<N extends Serializable> extends AbstractProtocol<N> {
   enum prev_dir {
@@ -21,50 +20,55 @@ public class protocol_logical_clock<N extends Serializable> extends AbstractProt
     return time;
   }
   
-  static public class logical_clock_msg implements Serializable, Externalizable {
-    byte [] data = null;
-    long tstamp;
-    //private static final long serialVersionUID = -1L;
+  static public class logical_clock_msg implements agarnet.serialisable {
+    final byte [] data;
+    final long tstamp;
     
-    public logical_clock_msg () { super (); }
     public logical_clock_msg (long timestamp, final byte [] data) {
       this.data = data;
       this.tstamp = timestamp;
     }
     
-    @Override
-    public void writeExternal (ObjectOutput out) throws IOException {
-      out.writeLong (tstamp);
+    public byte [] serialise () throws IOException {
+      ByteArrayOutputStream bos = new ByteArrayOutputStream ();
+      DataOutputStream dos = new DataOutputStream (bos);
+      
+      dos.writeLong (tstamp);
       if (data == null || data.length == 0) {
-        out.writeInt (0);
-        return;
+        dos.writeInt (0);
+      } else {
+        dos.writeInt (data.length);
+        dos.write (data);
       }
       
-      out.writeInt (data.length);
-      out.write (data, 0, data.length);
+      return bos.toByteArray ();
     }
-
-    @Override
-    public void readExternal (ObjectInput in) throws IOException,
-        ClassNotFoundException {
-      tstamp = in.readLong ();
-      int len = in.readInt ();
+    
+    public static logical_clock_msg deserialise (byte [] b) throws IOException {
+      DataInputStream dis = new DataInputStream (new ByteArrayInputStream (b));
+      
+      long tstamp = dis.readLong ();
+      int len = dis.readInt ();
+      byte [] data = null;
+      
       if (len > 0) {
         data = new byte[len];
-        if (in.read (data, 0, len) != len)
-          throw new IOException ("Unable to read data!");
+        if (dis.read (data) != data.length)
+          throw new IOException ("Data length mismatch!");
       }
+      
+      return new logical_clock_msg (tstamp, data);
     }
   }
 
   @Override
   public void up (N src, byte [] data) {
-    logical_clock_msg msg = null;
+    logical_clock_msg msg;
     
     try {
-      msg = marshall.deserialise (msg, data);
+      msg = logical_clock_msg.deserialise (data);
     } catch (Exception e) {
-      debug.printf (debug.levels.ERROR, "Unhandled message! %s\n",
+      debug.printf (debug.levels.ERROR, "Error decoding message! %s\n",
                                          e.getMessage ());
       return;
     }
