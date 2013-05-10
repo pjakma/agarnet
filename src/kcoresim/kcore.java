@@ -1,5 +1,6 @@
 package kcoresim;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -122,7 +123,12 @@ public class kcore<N> extends AbstractProtocol<Long> {
     debug.printf ("%d: %d\n", selfId, kbound);
     
     for (Long neigh : connected)
-      send (neigh, get_default_new_nmsg ());
+      try {
+        send (neigh, get_default_new_nmsg ().serialise ());
+      } catch (IOException e) {
+        debug.println (debug.levels.ERROR, "Unable to send message to" + neigh + "! " + 
+                       e.getMessage ());
+      }
     
     genupdated = false;
   }
@@ -179,10 +185,10 @@ public class kcore<N> extends AbstractProtocol<Long> {
   @Override
   public void up(Long src, byte[] data) {
     debug.printf ("%s: receive msg from %s\n", selfId, src);
-    neighbour_msg m = null;
+    neighbour_msg m;
     
     try {
-      m = marshall.deserialise (m, data);
+      m = neighbour_msg.deserialise (data);
     } catch (Exception e) {
       debug.printf (debug.levels.ERROR, "%d: Unhandled message!\n", selfId);
       return;
