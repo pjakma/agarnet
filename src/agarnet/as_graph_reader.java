@@ -137,24 +137,50 @@ public class as_graph_reader<N,E> {
             network.set (from_as, to_as, labeler.edge (from_as, to_as));
           }
         },
-        /* IRL format:
+        /* IRL format is supposed to be:
          * "ASN to_AS first_seen last_seen AS_PATH_pos [MRT record]"
          * timestamps are unix format.
+         * 
+         * But some files in 2011 seem to have:
+         * "ASN tstamp tstamp to_ASN MRT-record"
+         * 
+         * IRL appears to have further oddities/bugs relating to ASDot.
          */
-        new acceptpattern ("IRL", String.format
-                           ("(%s|[-]?%s)\\s+(%s|[-]?%s)\\s+(%s)\\s+(%s)\\s+(%s).*$",
-                             sre_asn, sre_asdot, sre_asn, sre_asdot, sre_tstamp, sre_tstamp,
-                             sre_index)) {
+        new acceptpattern ("IRL",
+                           String.format ("(?:%s)|(?:%s)",
+                             String.format ("(%s|[-]?%s)\\s+(%s|[-]?%s)\\s+(%s)\\s+(%s)\\s+(%s).*$",
+                                            sre_asn, sre_asdot, sre_asn, sre_asdot, 
+                                            sre_tstamp, sre_tstamp, sre_index),
+                             String.format ("(%s|[-]?%s)\\s+(?:%s)\\s+(?:%s)\\s+(%s|[-]?%s).*$",
+                                            sre_asn, sre_asdot, sre_tstamp, sre_tstamp,
+                                            sre_asn, sre_asdot))
+                          ) {
           @Override
           void parse_line (MatchResult m) {
             /* for now, don't do anything with the extra info 
              * over AS AS format
              */
-            N from_as = labeler.node (normalise_asn(m.group (1)));
-            N to_as = labeler.node (normalise_asn (m.group (2)));
+            
+            /* This guff is needed cause of files in IRL data set that don't
+             * match their described format, hence we have to match 2 formats.
+             */
+            int first = 1;
+            for (int i = 1; i <= m.groupCount (); i++) {
+              if (m.group (i) != null) {
+                first = i;
+                break;
+              }
+            }
+            for (int i = 0; i <= m.groupCount (); i++)
+              debug.printf ("match %d: %s\n", i, m.group (i));
+            
+            String sfrom = m.group (first);
+            String sto = m.group (first + 1);
+            N from_as = labeler.node (normalise_asn (sfrom));
+            N to_as = labeler.node (normalise_asn (sto));
 
             debug.printf ("setting %s (%s) to %s (%s)\n",
-                         from_as, m.group (1), to_as, m.group (2));
+                         from_as, sfrom, to_as, sto);
 
             network.remove (from_as, to_as);
             network.set (from_as, to_as, labeler.edge (from_as, to_as));
