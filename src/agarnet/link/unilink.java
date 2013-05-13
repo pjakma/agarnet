@@ -65,8 +65,8 @@ public class unilink<I> extends abstract_tickable
                                    int capacity) {
     if (id == null)
       throw new IllegalArgumentException ("Link ID must not be null");
-    if (bandwidth < 1)
-      throw new IllegalArgumentException ("Bandwidth must be > 0");
+    if (bandwidth < 0)
+      throw new IllegalArgumentException ("Bandwidth must be => 0");
     if (latency < 1)
       throw new IllegalArgumentException ("Latency must be > 0");
     if (capacity < 1)
@@ -98,7 +98,7 @@ public class unilink<I> extends abstract_tickable
     this.id = id;
     this.capacity = Integer.MAX_VALUE;
     this.latency = 1;
-    this.bandwidth = Integer.MAX_VALUE;
+    this.bandwidth = 0;
     _init_linkq ();
   }
 
@@ -202,6 +202,11 @@ public class unilink<I> extends abstract_tickable
     _sanity_check_buffered ();
   }
   
+  private boolean enough_bandwidth (byte [] data, int bytes) {
+    if (bandwidth <= 0)
+      return true;
+    return bytes + data.length <= bandwidth;
+  }
   private void tx_to_linkq () {
     _sanity_check_buffered ();
     
@@ -225,7 +230,7 @@ public class unilink<I> extends abstract_tickable
     
     /* Now see if we can fit in more, without losing anything */
     while ((data = txbuf.peek ()) != null
-           && bytes + data.length <= bandwidth) {
+           && enough_bandwidth (data, bytes)) {
       l.add (data);
       bytes += data.length;
       txbuf.poll ();
