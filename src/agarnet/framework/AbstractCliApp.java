@@ -233,14 +233,14 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       new ConfigOptionSet () {{
         put (new IntVar (
             "minbw",
-            "Minimum bandwith of links, in bytes",
-            1, Integer.MAX_VALUE)
-            .set (Integer.MAX_VALUE));
+            "Minimum bandwith of links, in bytes, 0 means infinite.",
+            0, Integer.MAX_VALUE)
+            .set (0));
         put (new IntVar (
             "maxbw",
-            "Maximum bandwith of links, in bytes",
-            1, Integer.MAX_VALUE)
-            .set (Integer.MAX_VALUE));
+            "Maximum bandwith of links, in bytes, 0 means infinite.",
+            0, Integer.MAX_VALUE)
+            .set (0));
         put (new IntVar (
             "minlat",
             "Minimum latency of links, in simulation ticks",
