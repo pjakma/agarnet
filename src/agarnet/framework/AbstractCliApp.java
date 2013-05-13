@@ -235,12 +235,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
             "minbw",
             "Minimum bandwith of links, in bytes",
             1, Integer.MAX_VALUE)
-            .set (1000));
+            .set (Integer.MAX_VALUE));
         put (new IntVar (
             "maxbw",
             "Maximum bandwith of links, in bytes",
             1, Integer.MAX_VALUE)
-            .set (10000));
+            .set (Integer.MAX_VALUE));
         put (new IntVar (
             "minlat",
             "Minimum latency of links, in simulation ticks",
