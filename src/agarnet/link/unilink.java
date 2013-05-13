@@ -92,7 +92,15 @@ public class unilink<I> extends abstract_tickable
     this.bandwidth = bandwidth;
     _init_linkq ();
   }
-  
+  public unilink (I id) {
+    _sanity_check_args (id, Integer.MAX_VALUE, 1, Integer.MAX_VALUE);
+    
+    this.id = id;
+    this.capacity = Integer.MAX_VALUE;
+    this.latency = 1;
+    this.bandwidth = Integer.MAX_VALUE;
+    _init_linkq ();
+  }
 
   private int _bytes_in_queue (Queue<byte []> q) {
     int bytes = 0;
