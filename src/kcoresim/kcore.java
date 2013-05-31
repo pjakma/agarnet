@@ -136,15 +136,13 @@ public class kcore<N> extends AbstractProtocol<Long> {
   int calc_kbound () {
     int kbound = connected.size ();
     int [] seen = new int [connected.size () + 1];
-    int highestseen = 0;
-        
+    
     for (neighbour_msg nmsg : neighbours.values ()) {
       int neigh_bound = (nmsg.gen == generation) ? nmsg.kbound
-                                                 : connected.size ();
+                                                 : kbound;
       
       int i = Math.min (neigh_bound, kbound);
       seen[i]++;
-      highestseen = Math.max (highestseen, i);
     }
     
     if (debug.applies ()) {
@@ -155,18 +153,13 @@ public class kcore<N> extends AbstractProtocol<Long> {
       
       debug.printf ("%d: seen: %s\n", selfId, sbseen);
     }
-    
-    for (int i = highestseen, tot = 0; i >= 0; i--) {
-      kbound = i;
-      
-      tot += seen[i];
-      
-      if (tot < i)
-        continue;
-      
-      break;
+
+    int tot = seen[kbound];
+    while (kbound > tot) {
+      kbound--;
+      tot += seen[kbound];
     }
-    
+        
     debug.printf ("%d: result %d\n", selfId, kbound);
     
     return kbound;
