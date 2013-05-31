@@ -8,6 +8,8 @@ CPATH="$CPATH:$PROJECTHOME/kcoresim/build/jar/kcoresim.jar"
 #PROFOPTS="-Xrunhprof"
 #PROFOPTS="-javaagent:/home/paul/Downloads/shiftone-jrat.jar"
 GCOPTS="-XX:+UseConcMarkSweepGC"
+JAVAOPTS="${JAVAOPTS} -XX:+UseLargePages "
+JAVAOPTS="${JAVAOPTS} -Xverify:none"
 
-java -Xverify:none ${PROFOPTS} ${GCOPTS} \
+java ${JAVAOPTS} ${PROFOPTS} ${GCOPTS} \
 	-server -classpath $CPATH kcoresim.kcoresim $@
