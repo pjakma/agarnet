@@ -47,7 +47,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected anipanel<Long, H> ap;
 
   private int gen_rand_in_range_inc (String desc, int max, int min) {
-    if (min < 1 || max - min < 0)
+    if (min < 0 || max - min < 0)
       throw new IllegalArgumentException (
                   "Illegal " + desc + " values, min: " + min + ", max: " + max);
     if (max == min)
