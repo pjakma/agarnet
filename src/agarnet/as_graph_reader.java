@@ -221,6 +221,9 @@ public class as_graph_reader<N,E> {
   private InputStream get_inputstream (String fname) throws IllegalArgumentException,
                                                             FileNotFoundException,
                                                             IOException {
+    if (fname.contentEquals ("-"))
+      return System.in;
+    
     fis = new FileInputStream (fname);
     pb = new PushbackInputStream (fis, 2);
     byte [] b = new byte [2];
