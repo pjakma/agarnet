@@ -9,15 +9,14 @@ import java.util.Set;
 
 import org.nongnu.multigraph.debug;
 
-import agarnet.data.marshall;
 import agarnet.framework.Simulation;
 import agarnet.protocols.AbstractProtocol;
 
-public class kcore<N> extends AbstractProtocol<Long> {
+public final class kcore<N> extends AbstractProtocol<Long> {
   /* for connected hosts */
   Simulation<Long,N> sim;
   /* currently connected hosts */
-  Set<Long> connected = new HashSet<Long> ();
+  Set<Long> connected = new HashSet<> ();
   int kbound;
   /* The generation of the algorithm, and
    * the ID of the gen setter.
@@ -25,8 +24,8 @@ public class kcore<N> extends AbstractProtocol<Long> {
   long generation;
   boolean genupdated;
   
-  /* Last received message from neighbour */
-  Map<Long,neighbour_msg> neighbours = new HashMap<Long,neighbour_msg>();
+  /* Last received kbound message from neighbour */
+  Map<Long,neighbour_msg> neighbours = new HashMap<>();
   
   public kcore (Simulation<Long, N> sim) {
     super ();
@@ -35,10 +34,10 @@ public class kcore<N> extends AbstractProtocol<Long> {
   }
   
   private neighbour_msg get_default_new_nmsg () {
-    return new neighbour_msg (selfId, generation, kbound);
+    return neighbour_msg.new_kbound_msg (selfId, generation, kbound);
   }
   private neighbour_msg get_default_new_nmsg (int kbound) {
-    return new neighbour_msg (selfId, generation, kbound);
+    return neighbour_msg.new_kbound_msg (selfId, generation, kbound);
   }
   
   private void generation_update () {
@@ -53,20 +52,19 @@ public class kcore<N> extends AbstractProtocol<Long> {
     
     if (gen <= generation)
       return;
-    
+
     generation = gen;
   }
   
   boolean generation_check (neighbour_msg m) {
-    neighbour_msg prevm;
-    
-    if (m.gen > generation
-        || ((prevm = neighbours.get (m.srcid)) != null
-            && prevm.gen < m.gen)) {
-      generation_update (m.gen);
-      return true;
-    }
-    return false;
+    if (m.gen <= generation)
+      return false;
+
+    if (m.gen > generation && m.value < kbound)
+      return false;
+
+    generation_update (m.gen);
+    return true;
   }
   
   @Override
@@ -95,9 +93,11 @@ public class kcore<N> extends AbstractProtocol<Long> {
       /* Find new neighbours */
       for (Long neigh : newc) {
         if (!connected.contains (neigh)) {
-          /* add default message, with new degree, for new neighbour */
-          generation_update ();
-          neighbours.put (neigh, get_default_new_nmsg (newc.size ()));
+          /* send initialisation message of our degree, so each side can
+           * figure out whether the other matters to it, before actually
+           * updating it's generation.
+           */
+          send_init (neigh, newc.size ());
         }
       }
       /* Find removed neighbours */
@@ -118,30 +118,53 @@ public class kcore<N> extends AbstractProtocol<Long> {
     if (kbound () || genupdated)
       broadcast (kbound);
   }
+
+  private void send_init (Long neigh, int degree) {
+    debug.printf ("%d: send DEGREE to neigh %d degree %d\n", selfId, neigh, degree);
+    
+    try {
+      neighbour_msg m
+        = neighbour_msg.new_degree_msg (selfId, generation, degree);
+      send (neigh, m.serialise ());
+    } catch (IOException e) {
+      debug.println (debug.levels.ERROR,
+                     "Unable to send message to" + neigh + "! " +
+                     e.getMessage ());
+    }
+  }
   
   private void broadcast (int kbound) {
     debug.printf ("%d: %d\n", selfId, kbound);
+    neighbour_msg msg = get_default_new_nmsg ();
+    byte [] bmsg;
     
+    try {
+      bmsg = msg.serialise ();
+    } catch (IOException e) {
+      debug.println (debug.levels.ERROR,
+                     "Unable to serialise message!: " + e.getMessage ());
+      return;
+    }
+
     for (Long neigh : connected)
-      try {
-        send (neigh, get_default_new_nmsg ().serialise ());
-      } catch (IOException e) {
-        debug.println (debug.levels.ERROR, "Unable to send message to" + neigh + "! " + 
-                       e.getMessage ());
-      }
+      send (neigh, bmsg);
     
     genupdated = false;
   }
   
   int calc_kbound () {
-    int kbound = connected.size ();
+    int newkbound = connected.size ();
     int [] seen = new int [connected.size () + 1];
-    
+    int highest = 0;
+
     for (neighbour_msg nmsg : neighbours.values ()) {
-      int neigh_bound = (nmsg.gen == generation) ? nmsg.kbound
-                                                 : kbound;
-      
-      int i = Math.min (neigh_bound, kbound);
+      int neigh_bound = (nmsg.gen >= generation) ? nmsg.value
+                                                 : newkbound;
+      if (nmsg.gen > generation)
+        assert (nmsg.value < this.kbound);
+
+      int i = Math.min (neigh_bound, newkbound);
+      highest = Math.max (i, highest);
       seen[i]++;
     }
     
@@ -149,20 +172,21 @@ public class kcore<N> extends AbstractProtocol<Long> {
       StringBuilder sbseen = new StringBuilder ();
       
       for (int i = 0; i < seen.length; i++)
-        sbseen.append (" " + seen[i]);
+        sbseen.append (" ").append (seen[i]);
       
       debug.printf ("%d: seen: %s\n", selfId, sbseen);
     }
 
-    int tot = seen[kbound];
-    while (kbound > tot) {
-      kbound--;
-      tot += seen[kbound];
+    newkbound = highest;
+    int tot = seen[newkbound];
+    while (newkbound > tot) {
+      newkbound--;
+      tot += seen[newkbound];
     }
         
-    debug.printf ("%d: result %d\n", selfId, kbound);
-    
-    return kbound;
+    debug.printf ("%d: result %d\n", selfId, newkbound);
+    this.setChanged ();
+    return newkbound;
   }
   
   private boolean kbound () {
@@ -194,18 +218,31 @@ public class kcore<N> extends AbstractProtocol<Long> {
       return;
     }
     
-    if (neighbours.get (m.srcid) == null) {
-      debug.printf (debug.levels.ERROR, "%d: Unknown neighour %d!\n", selfId, src);
+    if (m.type == m.type.KBOUND
+        && neighbours.get (m.srcid) == null) {
+      debug.printf (debug.levels.ERROR,
+                    "%d: Unknown neighbour %d!\n", selfId, src);
     }
     
     stats_inc (stat.recvd);
     
-    generation_check (m);
-    
-    neighbours.put (src, m);
-    
     debug.printf ("%s: Received %s from %d\n", selfId, m, src);
-    
+
+    switch (m.type) {
+      case DEGREE:
+        /* initialisation message */
+        if (m.value >= kbound)
+          generation_update (Math.max (this.generation + 1, m.gen));
+        neighbours.put (src, get_default_new_nmsg (m.value));
+        if (m.value < kbound)
+          return;
+        break;
+      case KBOUND:
+        neighbours.put (src, m);
+        generation_check (m);
+        break;
+    }
+
     if (kbound () || genupdated)
       broadcast (kbound);
   }
@@ -217,19 +254,20 @@ public class kcore<N> extends AbstractProtocol<Long> {
     sb.append ("\nkcore: kb/gen/deg: (" + this.kbound);
     sb.append ("," + this.generation);
     sb.append ("," + this.connected.size ());
+    sb.append ("\ncalc_kbound(): " + this.calc_kbound ());
     sb.append ("\nconnected:\n" + this.connected);
     sb.append ("\nneighbours:");
     for (Long neigh : neighbours.keySet ()) {
       neighbour_msg m = neighbours.get (neigh);
-      if (m.kbound >= this.kbound) {
+      if (m.value >= this.kbound) {
         simhost remote = (simhost) sim.id2node (m.srcid );
         sb.append (String.format ("\n  msg from %d (degree %d): ",
                    m.srcid, remote.degree ()));
         sb.append (String.format ("got/actual (%d,%d) (%d,%d)%s",
-                                  m.gen, m.kbound,
+                                  m.gen, m.value,
                                   remote.kgen (), remote.kbound (),
                                   (m.gen != remote.kgen ()
-                                   || m.kbound != remote.kbound ()) ? "!" : ""
+                                   || m.value != remote.kbound ()) ? "!" : ""
                                   ));
       }
     }
