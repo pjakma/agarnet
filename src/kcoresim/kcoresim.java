@@ -7,11 +7,12 @@ import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Observer;
+import java.util.TreeMap;
 
 import javax.swing.JFrame;
 
@@ -28,6 +29,9 @@ import agarnet.protocols.protocol_logical_clock;
 import agarnet.protocols.protocol_stats.stat;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
+import agarnet.perturb.*;
+import java.util.List;
+import java.util.Set;
 
 
 public class kcoresim extends AbstractCliApp<simhost> implements Observer {
@@ -59,10 +63,6 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   
   /* Whether last runs had a global v dist kcore mismatch */
   private boolean mismatch = false;
-  private int removed_runs = 0;
-  
-  ArrayList<Edge<simhost,link<simhost>>> last_removed_edges
-    = new ArrayList<Edge<simhost,link<simhost>>> ();
   
   private simhost get_host (Long id, protocol<Long> [] protos) {
     simhost s = new simhost (this, protos.clone ());
@@ -85,7 +85,11 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     for (int i = 0; i < conf_nodes.get (); i++)
     	network.add (get_host ((long) i));
   }
-  
+
+  final static BooleanConfigOption conf_print_nodes = new BooleanConfigOption (
+        "print-nodes", 'N',
+        "Print per-node information after each run").set (false);
+
   final static IntConfigOption conf_nodes = new IntConfigOption (
         "nodes", 'p', "<number>",
         "number of nodes to create",
@@ -93,19 +97,18 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
         .set (9);
   
   final static SuboptConfigOption conf_perturb
-  = new SuboptConfigOption (
+    = new SuboptConfigOption (
       "perturb", 'b', "<simulation perturbation options>",
-      "Perturbation of the simulation, e.g. moving nodes.",
+      "Perturbation of the simulation across runs",
       LongOpt.REQUIRED_ARGUMENT,
       new ConfigOptionSet () {{
-        put (new IntVar (
-            "ticks",
-            "Number of ticks to perturb simulation at",
-            0, Integer.MAX_VALUE)
-            .set (10));
         put (new BooleanVar ("perturb", "Pertub simulation on each iteration"));
         put (new IntVar ("max","Max. # of perturbations to make",
-                         0, Integer.MAX_VALUE).set (10));
+                         0, Integer.MAX_VALUE).set (0));
+        put ("diff", new ObjectVar [] {
+             new StringVar ("diff", "diff blah blah"),
+             new StringVar ("test", "test param how do we do this?"),
+        });
         put (new NumberProbVar (
             "links",
             "number or percentage of edges to remove")
@@ -122,6 +125,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     confvars.add (conf_nodes);
     confvars.add (conf_perturb);
     confvars.add (conf_srtp);
+    confvars.add (conf_print_nodes);
     
     for (ConfigurableOption cv : confvars)
       lopts.add (cv.lopt);
@@ -138,6 +142,9 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
           break;
         case 'b':
           conf_perturb.parse (g.getOptarg ());
+          break;
+        case 'N':
+          conf_print_nodes.set (true);
           break;
         case 'p':
           conf_nodes.parse (g.getOptarg ());
@@ -236,16 +243,71 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     
     AdjacencyMatrix.sparse (out, network);
   }
+
+  private class histogramme<T> {
+    class totals {
+      long keys;
+      long counts;
+    }
+    Map<T,Long> hist = new TreeMap ();
+
+    void inc (T key) {
+      Long val = hist.get (key);
+      hist.put (key, (val != null) ? ++val : 1);
+    }
+
+    Set<Entry<T,Long>> entries () {
+      return hist.entrySet ();
+    }
+
+    long total () {
+      long total = 0;
+      for (long l : hist.values ()) {
+        total += l;
+      }
+      return total;
+    }
+  }
   
-  private void describe_net (int maxk) {
+  private void describe_net (Iterable<simhost> nodes, int maxk) {
     int count[] = new int [network.max_nodal_degree () + 1];
     long dcount[] = new long [count.length];
+    
+    int sentcount[] = new int [count.length];
+    int rcvcount[] = new int [count.length];
+    int broadcastcount[] = new int [count.length];
+    //long llccount[] = new long [count.length];
+
+    histogramme<Long> lchist = new histogramme<> ();
+    histogramme<Long> msghist = new histogramme<> ();
+    histogramme<Long> bcasthist = new histogramme<> ();
+
+    //Map<Long,Long> lchist = new TreeMap<> ();
+    //Map<Long,Long> msghist = new TreeMap<> ();
+    //Map<Long,Long> bcasthist = new TreeMap<> ();
+    
     long ktotaldelta = 0;
     int maxdk = 0;
     int kmaxmismatch = 0;
     
-    for (simhost h : network) {
+    for (simhost h : nodes) {
       if (maxk > 0) {
+        sentcount[h.gkc().k] += h.stat_get (stat.sent);
+        rcvcount[h.gkc ().k] += h.stat_get (stat.recvd);
+        Long bcasts = (long) (h.stat_get (stat.sent) / h.getMass ());
+        broadcastcount[h.gkc ().k] += bcasts;
+
+        Long l;
+        //Long l = lchist.get (h.logical_time ());
+        //lchist.put (h.logical_time (), (l != null ? ++l : 1));
+        lchist.inc (h.logical_time ());
+        
+        msghist.inc (h.stat_get (stat.sent));
+        //msghist.put (h.stat_get (stat.sent), (l != null ? ++l : 1));
+        
+        //l = bcasthist.get (bcasts);
+        bcasthist.inc (bcasts);
+        
         count[h.gkc().k]++;
         if (h.stat_get (stat.stored) > maxk)
           System.out.println ("dist kshell higher than maxk? " +
@@ -255,28 +317,31 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
         maxdk = Math.max ((int) h.stat_get (stat.stored), maxdk);
       }
       
-      if (debug.applies () || h.stat_get (stat.stored) != h.gkc().k) {
+      if (/*debug.applies () ||*/ h.stat_get (stat.stored) != h.gkc().k) {
         ktotaldelta += h.stat_get (stat.stored) - h.gkc().k;
         if (h.stat_get (stat.stored) != h.gkc().k) {
           mismatch = true;
           kmaxmismatch = Math.max (kmaxmismatch, h.gkc().k);
         }
+        debug.levels l = debug.level ();
+        debug.level (debug.levels.DEBUG);
         System.out.printf ("\nincorrect host: %s\n%s\n", h, h.kcorestring ());
+        debug.level (l);
+
         for (simhost neigh : network.successors (h))
           System.out.printf ("  -> %s\n", neigh);
+
         System.out.printf ("  unemptied links:\n");
         for (Edge<simhost, link<simhost>> e : network.edges (h))
           if (e.label ().size () > 0)
             System.out.printf ("    %s\n", e);
       }
     }
-    for (int i = 0; i <= maxk; i++) {
+    for (int i = 0; i <= maxk || i <= maxdk; i++) {
       System.out.printf ("shell %2d : %d nodes%s\n", i, count[i],
                          count[i] != dcount[i] ? (" ("+ dcount[i] + ")")
                                                : "");
     }
-    for (int i = maxk; i < maxdk; i++)
-      System.out.printf ("shell %2d : 0 nodes (%d)\n", i, dcount[i]);
     
     if (mismatch) {
       debug.println ("printing core " + kmaxmismatch);
@@ -286,6 +351,27 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       }
       debug_mismatches ();
     }
+    
+    for (int i = 0; i <= maxk; i++) {
+      System.out.printf ("shell %2d : %6d sent, %6d rcvd, %6d bcasts\n", 
+                         i, sentcount[i], rcvcount[i], broadcastcount[i]);
+    }
+    
+    for (Entry<Long, Long> e : lchist.entries ()) {
+      System.out.printf ("hist lc: %6d %6d\n", e.getKey (), e.getValue ());
+    }
+    System.out.printf ("hist lc tot: %d\n", lchist.total ());
+
+    for (Entry<Long, Long> e : msghist.entries ()) {
+      System.out.printf ("hist msg: %6d %6d\n", e.getKey (), e.getValue ());
+    }
+    System.out.printf ("hist msg tot: %d\n", lchist.total ());
+
+    for (Entry<Long, Long> e : bcasthist.entries ()) {
+      System.out.printf ("hist bcast: %6d %6d\n", e.getKey (), e.getValue ());
+    }
+    System.out.printf ("hist bcast tot: %d\n", lchist.total ());
+
     System.out.println ("kmax: " + maxk);
     System.out.println ("KDI: " + ktotaldelta);
     System.out.println ("Mismatch: " + mismatch);
@@ -294,141 +380,120 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   @Override
   protected void describe_end () {
     if (get_runs () > 0)
-      describe_net (kshell.calc (network));
+      describe_net (network, kshell.calc (network));
+
+    if (conf_print_nodes.get ()) {
+      System.out.printf ("Per-node-info: # ID, degree, "
+                         +"kbound,   kgen,   sent,   recvd\n");
+      for (simhost h : network) {
+        System.out.printf ("Node %8d : %8d %8d %8d %8d %8d\n",
+                           h.getId (),
+                           h.degree (),
+                           h.kbound (),
+                           h.kgen (),
+                           h.stat_get (stat.sent),
+                           h.stat_get (stat.recvd)
+                );
+
+      }
+    }
+    System.out.printf ("End Per-node-info\n");
     
     long maxltime = 0;
-    for (simhost h : network)
+    for (simhost h : network) {
       maxltime = Math.max (maxltime, h.logical_time ());
+    }
     System.out.println ("Logical clock: " + maxltime);
     
     super.describe_end ();
   }
   
   @Override
-  protected boolean has_converged () {    
+  protected boolean has_converged () {
+    /* link activity is sufficient to determine convergence in kcore */
     return true;
   }
-  
-  /* Add or remove a link from a randomly chosen pair of nodes */ 
-  private void perturb_add_or_remove_one () {
-    Iterator<simhost> ith = network.random_node_iterable ().iterator ();
-    
-    if (!ith.hasNext ())
-      return;
-    
-    simhost h1 = ith.next ();
-    
-    if (!ith.hasNext ())
-      return;
-    
-    simhost h2 = ith.next ();
-    
-    if (h1 == h2)
-      return;
-    
-    if (network.is_linked (h1, h2)) {
-      last_removed_edges.add (network.edge (h1, h2));
-      debug.printf ("remove link %ld to %ld\n", h1.getId (), h2.getId ());
-      network.remove (h1, h2);
-    } else {
-      debug.printf ("add link %ld to %ld\n", h1.getId (), h2.getId ());
-      network.set (h1, h2, this.default_edge_labeler ().getLabel (h1, h2));
-    }
-  }
-  
-  /* remove one randomly chosen link */
-  private void perturb_random_remove (int num) {
-    Iterator<simhost> ith = network.random_node_iterable ().iterator ();
-    
-    System.out.printf ("removing %d edges\n", num);
-    
-    while (ith.hasNext () && num > 0) {
-      simhost h = ith.next ();
-      
-      Iterator<Edge<simhost,link<simhost>>> ite = network.random_edge_iterable (h).iterator ();
-      
-      if (!ite.hasNext ())
-        return;
-      
-      Edge<simhost,link<simhost>> e = ite.next ();
-      last_removed_edges.add (e);
-      System.out.printf ("removing %s\n", e);
-      
-      network.remove (h, e.to ());
-      num--;
-    }
-  }
-  
-  /* remove the 1-shell */
-  private void perturb_remove_lowest_shell () {
-    System.out.println ("remove lowest shell");
-    int min = Integer.MAX_VALUE;
-    
-    for (simhost h : network) {
-      debug.printf ("consider %s: %d vs %d\n", h,  h.gkc ().k, min);
-      if (h.gkc ().k > 0 && h.gkc ().k < min)
-        min = h.gkc ().k;
-    }
-    
-    if (min == 0)
-      return;
-    
-    System.out.println ("# removing the " + min + "-shell");
-    
-    for (simhost h : network)
-      if (h.gkc().k == min)
-        last_removed_edges.addAll (network.edges (h));
-    
-    for (Edge<simhost,link<simhost>> e : last_removed_edges)
-      network.remove (e.from (), e.to (), e.label ());
-    
-    for (Edge<simhost,link<simhost>> e : last_removed_edges) {
-      if (network.nodal_outdegree (e.from ()) == 0)
-        network.remove (e.from ());
-      if (network.nodal_outdegree (e.to ()) == 0)
-        network.remove (e.to ());
-    }
-  }
-  
+
   @Override
   protected void perturb () {
     return;
   }
-  
-  @Override
-  protected int get_runs () {
-    if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
-      return Integer.MAX_VALUE;
-    }
-    return super.get_runs ();
+
+  private RemoveAddEach<simhost,link<simhost>> ra_each = null;
+
+  private void run_perturb_desc (List<Edge<simhost,link<simhost>>> edges,
+                                 String sense) {
+    System.out.printf ("# Perturb %s edges: id, degree, kcore\n",
+                       sense);
+      for (Edge<simhost,link<simhost>> e : edges) {
+        System.out.printf ("Perturb %s edge: %d %d %d ←→ %d %d %d\n",
+                           sense,
+                           e.from ().getId (),
+                           e.from ().degree (),
+                           e.from ().kbound (),
+                           e.to ().getId (),
+                           e.to ().degree (),
+                           e.to ().kbound ());
+      }
   }
   private void run_perturb (int run) {
+    if (!((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
+      reset_network ();
+      return;
+    }
+
+    if (run == 0)
+      return;
+    
+    System.out.println ("# Perturb: doing cross-run perturb");
+
+
+    for (simhost h : network) {
+      h.stats_reset ();
+    }
+    
+    if (ra_each == null) {
+      float remove_edges_conf
+              = ((NumberProbVar)conf_perturb.subopts.get ("links")).get ();
+      int max = ((IntVar) conf_perturb.subopts.get ("max")).get ();
+      ra_each = new RemoveAddEach<> (network, remove_edges_conf, max);
+    }
+
+    if (ra_each.last_removed_edges ().size () > 0)
+      run_perturb_desc (ra_each.last_removed_edges (), "added");
+    
+    List<Edge<simhost,link<simhost>>> removed = ra_each.perturb ();
+
+    if (removed.size () > 0)
+      run_perturb_desc (removed, "removed");
+  }
+
+  private RandomRemove<simhost,link<simhost>> random_remove = null;
+  /* run perturb to debug mismatches by removing edges to search for
+   * smaller graphs that still show the mismatch. Not needed any more.
+   * left in for reference.
+   */
+  @SuppressWarnings ("unused")
+  private void run_perturb_mismatch_debug (int run) {
     if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
       System.out.println ("# doing cross-run perturb");
-      int maxperturbs = ((IntVar)conf_perturb.subopts.get ("max")).get ();
-      float remove_edges_conf = ((NumberProbVar)conf_perturb.subopts.get ("links")).get ();
-      int remove;
-      
-      remove = (int) (remove_edges_conf < 1 ? Math.max (network.size () * remove_edges_conf, 1)
-                                            : remove_edges_conf);
-      
-      if (!mismatch && last_removed_edges.size () > 0) {
-        System.out.println ("Perturb: Add " + last_removed_edges.size ());
-        for (Edge<simhost,link<simhost>> e : last_removed_edges)
-          network.set (e.from (), e.to (), e.label ());
-        last_removed_edges.clear ();
-        removed_runs++;
+
+      if (random_remove == null) {
+        float remove_edges_conf
+                = ((NumberProbVar)conf_perturb.subopts.get ("links")).get ();
+        random_remove = new RandomRemove (network, remove_edges_conf);
       }
 
-      if (mismatch && last_removed_edges.size () > 0)
-        last_removed_edges.clear ();
+      if (!mismatch)
+        random_remove.restore ();
+
+      random_remove.clear_removed_edges ();
       
       if (run > 0){
-        System.out.println ("Perturb: Remove " + remove);
-        if ((maxperturbs <= 0) || (run <= maxperturbs))
-          perturb_random_remove (remove);
+        random_remove.remove ();
       }
     }
+    reset_network ();
   }
 
   @Override
@@ -437,13 +502,12 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       super.run_setup (run);
 
     run_perturb (run);
-    reset_network ();
+
     rewire_update_hosts ();
 
     /* ad-hoc FSM, eek */
     if (mismatch)
       mismatch = false;
-    
   }
   
   @Override
