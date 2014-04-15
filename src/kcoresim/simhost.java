@@ -69,7 +69,9 @@ public class simhost extends AnimatableHost<Long, simhost>
                + ((gkc.removed) ? "removed" : "")
                + (gkc.k == 0 || (stat_get (stat.stored) == gkc.k) ? ""
                                                     : (" - mismatch! " ))
-         + ")";
+               + " r: " + stat_get (stat.recvd)
+               + " s: " + stat_get (stat.sent)
+           + ")";
   }
   
   public String kcorestring () {
