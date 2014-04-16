@@ -50,14 +50,18 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
    */
   @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_kcore () {
+    kcore<simhost> kcore
+      = conf_basic_kcore.get () ? new kcore<simhost> (this)
+                                : new opt_kcore<simhost> (this);
+
     return conf_srtp.get () ? new protocol [] {
                                 new protocol_srtp<> (),
                                 new protocol_logical_clock<> (),
-                                new kcore<simhost> (this),
+                                kcore,
                               }
                             : new protocol [] {
                                 new protocol_logical_clock<> (),
-                                new kcore<simhost> (this),
+                                kcore,
                             };
   }
   
@@ -89,7 +93,9 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   final static BooleanConfigOption conf_print_nodes = new BooleanConfigOption (
         "print-nodes", 'N',
         "Print per-node information after each run").set (false);
-
+  final static BooleanConfigOption conf_basic_kcore = new BooleanConfigOption (
+        "basic-kcore", 'B',
+        "Run the basic kcore algorithm").set (false);
   final static IntConfigOption conf_nodes = new IntConfigOption (
         "nodes", 'p', "<number>",
         "number of nodes to create",
@@ -126,7 +132,8 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     confvars.add (conf_perturb);
     confvars.add (conf_srtp);
     confvars.add (conf_print_nodes);
-    
+    confvars.add (conf_basic_kcore);
+
     for (ConfigurableOption cv : confvars)
       lopts.add (cv.lopt);
     
@@ -142,6 +149,9 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
           break;
         case 'b':
           conf_perturb.parse (g.getOptarg ());
+          break;
+        case 'B':
+          conf_basic_kcore.set (true);
           break;
         case 'N':
           conf_print_nodes.set (true);

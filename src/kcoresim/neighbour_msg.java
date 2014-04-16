@@ -6,30 +6,30 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-class neighbour_msg  {
-  enum msg_type {
+public class neighbour_msg  {
+  public enum msg_type {
     KBOUND,
     DEGREE;
     private final static msg_type types[] = values ();
     static msg_type to_msg_type (int ordinal) { return types[ordinal]; }
   };
-  final long srcid;
-  final msg_type type;
-  final long gen;
+  public final long srcid;
+  public final msg_type type;
+  public final long gen;
 
   /* KBOUND, value is kbound
    * DEGREE, value is degree
    */
-  final int value;
+  public final int value;
 
-  static neighbour_msg new_kbound_msg (long srcid, long gen, int value) {
+  public static neighbour_msg new_kbound_msg (long srcid, long gen, int value) {
     return new neighbour_msg (srcid, msg_type.KBOUND, gen, value);
   }
-  static neighbour_msg new_degree_msg (long srcid, long gen, int value) {
+  public static neighbour_msg new_degree_msg (long srcid, long gen, int value) {
     return new neighbour_msg (srcid, msg_type.DEGREE, gen, value);
   }
 
-  neighbour_msg (long srcid, msg_type type, long gen, int value) {
+  public neighbour_msg (long srcid, msg_type type, long gen, int value) {
     this.srcid = srcid;
     this.type = type;
     this.gen = gen;
