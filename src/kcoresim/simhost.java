@@ -11,6 +11,7 @@ import agarnet.protocols.protocol;
 import agarnet.protocols.protocol_logical_clock;
 
 import agarnet.protocols.host.AnimatableHost;
+import agarnet.protocols.host.host;
 
 /* This is a host type for:
  * 
@@ -85,6 +86,20 @@ public class simhost extends AnimatableHost<Long, simhost>
   }
   public long degree () {
     return kcore_protocol.connected.size ();
+  }
+
+  public void replace_kcore (kcore<simhost> kcore) {
+    kcore_protocol = kcore;
+    Long id = host.getId ();
+    protocol<Long> [] pcols = host.protocols ();
+    for (int i = 0; i < pcols.length; i++) {
+      if (pcols[i] instanceof kcore<?>)
+        pcols[i] = kcore;
+      if (pcols[i] instanceof protocol_logical_clock<?>)
+        lc_proto = (protocol_logical_clock<Long>) pcols[i];
+    }
+    host = new host<Long,simhost> (sim, pcols);
+    host.setId (id);
   }
   
   public long logical_time () {

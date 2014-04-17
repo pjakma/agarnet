@@ -12,6 +12,8 @@ import org.nongnu.multigraph.debug;
 import agarnet.framework.Simulation;
 import agarnet.protocols.AbstractProtocol;
 
+import kcoresim.neighbour_msg.msg_type;
+
 public class kcore<N> extends AbstractProtocol<Long> {
   /* for connected hosts */
   Simulation<Long,N> sim;
@@ -31,6 +33,10 @@ public class kcore<N> extends AbstractProtocol<Long> {
     super ();
     this.sim = sim;
     this.reset ();
+  }
+
+  public String kcore_type () {
+    return "basic";
   }
   
   neighbour_msg get_default_new_nmsg () {
@@ -201,7 +207,7 @@ public class kcore<N> extends AbstractProtocol<Long> {
       return;
     }
     
-    if (m.type != m.type.KBOUND)
+    if (m.type != msg_type.KBOUND)
       return;
 
     if (neighbours.get (m.srcid) == null) {

@@ -23,9 +23,7 @@ import org.nongnu.multigraph.structure.kshell;
 import agarnet.anipanel;
 import agarnet.framework.AbstractCliApp;
 import agarnet.link.*;
-import agarnet.protocols.protocol;
-import agarnet.protocols.protocol_srtp;
-import agarnet.protocols.protocol_logical_clock;
+import agarnet.protocols.*;
 import agarnet.protocols.protocol_stats.stat;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
@@ -48,11 +46,21 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
    * the reasoning in the "Generics Tutorial" PDF surely invites a better
    * solution.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"rawtypes","unchecked"})
   private protocol<Long> [] new_protstack_kcore () {
-    kcore<simhost> kcore
-      = conf_basic_kcore.get () ? new kcore<simhost> (this)
-                                : new opt_kcore<simhost> (this);
+    String alg = ((StringVar)conf_kcore.subopts.get ("alg")).get ();
+    kcore<simhost> kcore;
+    switch (alg) {
+      case "basic":
+        kcore = new kcore<> (this);
+        break;
+      case "opt":
+      default:
+        kcore = new opt_kcore<> (this);
+        break;
+    }
+    
+    kcore_type = kcore.kcore_type ();
 
     return conf_srtp.get () ? new protocol [] {
                                 new protocol_srtp<> (),
@@ -67,7 +75,10 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   
   /* Whether last runs had a global v dist kcore mismatch */
   private boolean mismatch = false;
-  
+
+  /* last kcore type created */
+  private String kcore_type = null;
+
   private simhost get_host (Long id, protocol<Long> [] protos) {
     simhost s = new simhost (this, protos.clone ());
     s.setId (id);
@@ -93,9 +104,14 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
   final static BooleanConfigOption conf_print_nodes = new BooleanConfigOption (
         "print-nodes", 'N',
         "Print per-node information after each run").set (false);
-  final static BooleanConfigOption conf_basic_kcore = new BooleanConfigOption (
-        "basic-kcore", 'B',
-        "Run the basic kcore algorithm").set (false);
+  final static SuboptConfigOption conf_kcore = new SuboptConfigOption (
+        "kcore", 'k', "[alg=(basic|opt)][first-run=true]",
+        "kcore algorithm options",
+        LongOpt.REQUIRED_ARGUMENT,
+        new ConfigOptionSet () {{
+          put (new StringVar ("alg", "(basic|opt)").set ("opt"));
+          put (new BooleanVar ("1run", "Only for the first run"));
+        }});
   final static IntConfigOption conf_nodes = new IntConfigOption (
         "nodes", 'p', "<number>",
         "number of nodes to create",
@@ -108,7 +124,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       "Perturbation of the simulation across runs",
       LongOpt.REQUIRED_ARGUMENT,
       new ConfigOptionSet () {{
-        put (new BooleanVar ("perturb", "Pertub simulation on each iteration"));
+        put (new BooleanVar ("perturb", "Perturb simulation on each iteration"));
         put (new IntVar ("max","Max. # of perturbations to make",
                          0, Integer.MAX_VALUE).set (0));
         put ("diff", new ObjectVar [] {
@@ -132,7 +148,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     confvars.add (conf_perturb);
     confvars.add (conf_srtp);
     confvars.add (conf_print_nodes);
-    confvars.add (conf_basic_kcore);
+    confvars.add (conf_kcore);
 
     for (ConfigurableOption cv : confvars)
       lopts.add (cv.lopt);
@@ -150,8 +166,8 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
         case 'b':
           conf_perturb.parse (g.getOptarg ());
           break;
-        case 'B':
-          conf_basic_kcore.set (true);
+        case 'k':
+          conf_kcore.parse (g.getOptarg ());
           break;
         case 'N':
           conf_print_nodes.set (true);
@@ -259,7 +275,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       long keys;
       long counts;
     }
-    Map<T,Long> hist = new TreeMap ();
+    Map<T,Long> hist = new TreeMap<> ();
 
     void inc (T key) {
       Long val = hist.get (key);
@@ -385,10 +401,11 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     System.out.println ("kmax: " + maxk);
     System.out.println ("KDI: " + ktotaldelta);
     System.out.println ("Mismatch: " + mismatch);
+    System.out.println ("kcore-type: " + kcore_type);
   }
   
   @Override
-  protected void describe_end () {
+  protected void describe_end (int run) {
     if (get_runs () > 0)
       describe_net (network, kshell.calc (network));
 
@@ -406,8 +423,8 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
                 );
 
       }
+      System.out.printf ("End Per-node-info\n");
     }
-    System.out.printf ("End Per-node-info\n");
     
     long maxltime = 0;
     for (simhost h : network) {
@@ -415,7 +432,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     }
     System.out.println ("Logical clock: " + maxltime);
     
-    super.describe_end ();
+    super.describe_end (run);
   }
   
   @Override
@@ -436,7 +453,7 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     System.out.printf ("# Perturb %s edges: id, degree, kcore\n",
                        sense);
       for (Edge<simhost,link<simhost>> e : edges) {
-        System.out.printf ("Perturb %s edge: %d %d %d ←→ %d %d %d\n",
+        System.out.printf ("Perturb %s edge: %d %d %d <-> %d %d %d\n",
                            sense,
                            e.from ().getId (),
                            e.from ().degree (),
@@ -462,23 +479,24 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
       h.stats_reset ();
     }
     
-    if (ra_each == null) {
+    if (perturber == null) {
       float remove_edges_conf
               = ((NumberProbVar)conf_perturb.subopts.get ("links")).get ();
       int max = ((IntVar) conf_perturb.subopts.get ("max")).get ();
-      ra_each = new RemoveAddEach<> (network, remove_edges_conf, max);
+      perturber = new RandomRemove<> (network, remove_edges_conf, max);
     }
 
-    if (ra_each.last_removed_edges ().size () > 0)
-      run_perturb_desc (ra_each.last_removed_edges (), "added");
+    if (perturber.removed_edges ().size () > 0)
+      run_perturb_desc (perturber.removed_edges (), "added");
     
-    List<Edge<simhost,link<simhost>>> removed = ra_each.perturb ();
+    List<Edge<simhost,link<simhost>>> removed = perturber.perturb ();
 
     if (removed.size () > 0)
       run_perturb_desc (removed, "removed");
   }
 
-  private RandomRemove<simhost,link<simhost>> random_remove = null;
+  private perturber<simhost,link<simhost>> perturber = null;
+  
   /* run perturb to debug mismatches by removing edges to search for
    * smaller graphs that still show the mismatch. Not needed any more.
    * left in for reference.
@@ -488,19 +506,20 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
       System.out.println ("# doing cross-run perturb");
 
-      if (random_remove == null) {
+      if (perturber == null) {
         float remove_edges_conf
                 = ((NumberProbVar)conf_perturb.subopts.get ("links")).get ();
-        random_remove = new RandomRemove (network, remove_edges_conf);
+        RandomRemove<simhost,link<simhost>> rr =
+                new RandomRemove<> (network, remove_edges_conf);
+        rr.combine (true);
+        perturber = rr;
       }
-
-      if (!mismatch)
-        random_remove.restore ();
-
-      random_remove.clear_removed_edges ();
+      
+      if (mismatch)
+        perturber.clear_removed_edges ();
       
       if (run > 0){
-        random_remove.remove ();
+        perturber.perturb ();
       }
     }
     reset_network ();
@@ -511,7 +530,16 @@ public class kcoresim extends AbstractCliApp<simhost> implements Observer {
     if (run == 0)
       super.run_setup (run);
 
-    run_perturb (run);
+    if (run == 1 &&
+        ((BooleanVar)conf_kcore.subopts.get ("1run")).get ()) {
+      for (simhost h : network) {
+        kcore<simhost> kcore = new opt_kcore<> (this);
+        kcore_type = kcore.kcore_type ();
+        h.replace_kcore (kcore);
+        h.reset ();
+      }
+    } else
+      run_perturb (run);
 
     rewire_update_hosts ();
 

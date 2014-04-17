@@ -2,6 +2,8 @@ package kcoresim;
 
 import java.io.IOException;
 
+import kcoresim.neighbour_msg.msg_type;
+
 import org.nongnu.multigraph.debug;
 
 import agarnet.framework.Simulation;
@@ -9,6 +11,10 @@ import agarnet.framework.Simulation;
 public final class opt_kcore<N> extends kcore<N> {
   public opt_kcore (Simulation<Long, N> sim) {
     super (sim);
+  }
+
+  public String kcore_type () {
+    return "opt";
   }
   
   protected boolean generation_check (neighbour_msg m) {
@@ -101,7 +107,7 @@ public final class opt_kcore<N> extends kcore<N> {
       return;
     }
     
-    if (m.type == m.type.KBOUND
+    if (m.type == msg_type.KBOUND
         && neighbours.get (m.srcid) == null) {
       debug.printf (debug.levels.ERROR,
                     "%d: Unknown neighbour %d!\n", selfId, src);
