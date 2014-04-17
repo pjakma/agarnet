@@ -45,9 +45,9 @@ public class host<I extends Serializable,N> extends AbstractProtocol<I> {
     }
   }
   
-  Queue<recvd_msg> inputbuf = new LinkedList<recvd_msg> ();
+  Queue<recvd_msg> inputbuf = new LinkedList<> ();
   
-  host (Simulation<I,N> sim, protocol<I> [] protocols) {
+  public host (Simulation<I,N> sim, protocol<I> [] protocols) {
     this.sim = sim;
     this.protocols = protocols;
     cpu = cpu_per_tick;
