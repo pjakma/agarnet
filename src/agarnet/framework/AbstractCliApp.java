@@ -61,10 +61,10 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected link<H> _gen_link (H from, H to, int bandwidth,
                                int from_latency, int to_latency) {
     unilink<H> ul1, ul2;
-    ul1 = new unilink<H> (from, bandwidth,
+    ul1 = new unilink<> (from, bandwidth,
                           from_latency);
-    ul2 = new unilink<H> (to, bandwidth, to_latency);
-    return new link<H> (ul1, ul2);
+    ul2 = new unilink<> (to, bandwidth, to_latency);
+    return new link<> (ul1, ul2);
   }
   
   /* Configuration option description & state variables */
@@ -281,7 +281,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
 
   /* List of all the desired configuration options */
   protected static final List<ConfigurableOption> confvars
-    = new ArrayList<ConfigurableOption> (Arrays.asList (
+    = new ArrayList<> (Arrays.asList (
     /* ints */  conf_period, conf_runs, conf_sleep,
     /* bools */ conf_debug, conf_gui, conf_random_tick, conf_degrees,
                 conf_path_stats, conf_kshell_stats,
@@ -726,11 +726,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   }
 
   @Override
-  protected void describe_begin () {
+  protected void describe_begin (int run) {
     debug.printf ("Network: %s\n", network);
     debug.printf ("idmap:\n%s", idmap);
     
     System.out.println ("\nGraph stats");
+    System.out.println ("Run: " + run);
     System.out.println ("Nodes: " + network.size ());
     System.out.println ("Edges: " + TraversalMetrics.edges (network));
     System.out.println ("Average degree: " + network.avg_nodal_degree ());
@@ -789,7 +790,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   }
   
   @Override
-  protected void describe_end () {
+  protected void describe_end (int run) {
     if (debug.applies ())
       describe_links ();
     

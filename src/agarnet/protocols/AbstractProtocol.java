@@ -4,8 +4,6 @@ import java.io.IOException;
 
 import org.nongnu.multigraph.debug;
 
-import agarnet.data.marshall;
-
 public abstract class AbstractProtocol<N>
                 implements protocol<N>, protocol_stats {
   protected protocol<N> above;
@@ -25,6 +23,8 @@ public abstract class AbstractProtocol<N>
     this.above = above;
     this.below = below;
     stats_reset ();
+    ticks = 0;
+    clearChanged ();
   }
   public protocol<N> setId (N id) {
     selfId = id;
@@ -73,27 +73,29 @@ public abstract class AbstractProtocol<N>
   }
   
   public void tick () { ticks++; clearChanged (); }
-  public void link_update () {}
+  public void link_update () { setChanged (); }
   
   /* These are in the spirit of the Observable class, however the decision
    * to not implement the rest of Observable is a deliberate one. Such
    * a role is best left to a general host class alone.
    *
-   * /* The simulator's default run() loop will consider that a host that
+   * The simulator's default run() loop will consider that a host that
    * hasChanged() still has more work to do, and keep the simulation running
    * for at least another tick.
    */
   protected void clearChanged () {
     changed = false;
   }
-  /* The simulator's default run() loop will consider that a host that
+  /**
+   * The simulator's default run() loop will consider that a host that
    * hasChanged() still has more work to do, and keep the simulation running
    * for at least another tick.
    */
   public boolean hasChanged () {
     return changed;
   }
-  /* The simulator's default run() loop will consider that a host that
+  /**
+   * The simulator's default run() loop will consider that a host that
    * hasChanged() still has more work to do, and keep the simulation running
    * for at least another tick.
    */
