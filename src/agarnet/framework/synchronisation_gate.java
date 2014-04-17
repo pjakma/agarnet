@@ -67,8 +67,9 @@ public class synchronisation_gate {
   }
   
   synchronized public String toString () {
-    return String.format ("gate(tid/r/f/w: %d/%d/%s)", 
+    return String.format ("gate(tid/o/r/w: %d/%d/%d/%s)", 
                           Thread.currentThread ().getId (),
+                          this.hashCode (),
                           waiting,
                           trace ());
   }
