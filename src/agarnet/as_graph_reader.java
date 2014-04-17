@@ -24,7 +24,10 @@ import org.nongnu.multigraph.debug;
  * 1. AS AS format:
  *    <from AS number> <to AS number>
  *
- * 2. UCLA IRL "links" file format:
+ * 2. Current UCLA IRL Topolite "links" file format:
+ *    <from ASN> <to ASN> [optional count over time period]
+ *    
+ * 3. The old UCLA IRL "links" file format:
  *    <from ASN> <to ASN> <first seen> <last seen> <index in AS_GRAPH> [MRT record]
  *    
  *    The last 4 parameters are ignored for now, but should be integers. ASNs in "ASDot"
@@ -34,7 +37,7 @@ import org.nongnu.multigraph.debug;
  *    IRLs parser/output seems to turn high ASNs into ASDots with a negative first
  *    portion.
  *
- * 3. AS-latency list format:
+ * 4. AS-latency list format:
  *    <from ASN> <from ASN internal latency> [<to ASN> <edge latence>]*
  *    The internal latency is ignored. The edge latency will be passed to the
  *    users edge labeler. The latencies must be specified with a decimal
@@ -54,7 +57,7 @@ public class as_graph_reader<N,E> {
   FileInputStream fis = null;
   PushbackInputStream pb = null;
   Scanner scr = null;
-  final static String sre_double = "\\d*([.]\\d+)?";
+  final static String sre_double = "(([.]\\d+)|\\d+([.]\\d+)?)";
   final static String sre_asn = "\\d+";
   final static String sre_asdot = "\\d+[.]\\d+";
   final static String sre_tstamp = "\\d+";
@@ -97,7 +100,7 @@ public class as_graph_reader<N,E> {
         new acceptpattern ("ASN latency list",
                            "("+sre_asn+")\\s("
                                    +sre_double+ ")\\s("
-                                   +sre_aslatency+ ")*\\s*$") {
+                                   +sre_aslatency+ ")+\\s*$") {
           @Override
           void parse_line (MatchResult m) {
             N from_as = labeler.node (m.group (1));
@@ -123,8 +126,10 @@ public class as_graph_reader<N,E> {
             }
           }
         },
-        /* "ASN ASN" format */
-        new acceptpattern ("ASN ASN", "("+sre_asn+")\\s+("+sre_asn+")\\s*") {
+        /* "ASN ASN [optional count]" format */
+        new acceptpattern ("ASN ASN", 
+                           String.format ("(%s)\\s+(%s)\\s*(\\d+)?\\s*",
+                                          sre_asn, sre_asn) ) {
           @Override
           void parse_line (MatchResult m) {
             N from_as = labeler.node (m.group (1));
@@ -137,14 +142,14 @@ public class as_graph_reader<N,E> {
             network.set (from_as, to_as, labeler.edge (from_as, to_as));
           }
         },
-        /* IRL format is supposed to be:
+        /* Old IRL topology links format is supposed to be:
          * "ASN to_AS first_seen last_seen AS_PATH_pos [MRT record]"
          * timestamps are unix format.
          * 
          * But some files in 2011 seem to have:
          * "ASN tstamp tstamp to_ASN MRT-record"
          * 
-         * IRL appears to have further oddities/bugs relating to ASDot.
+         * Old IRL appears to have further oddities/bugs relating to ASDot.
          */
         new acceptpattern ("IRL",
                            String.format ("(?:%s)|(?:%s)",
