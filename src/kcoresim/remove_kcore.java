@@ -39,7 +39,7 @@ public class remove_kcore {
 
     System.out.println ("# removing the " + min + "-shell");
 
-    List<Edge<simhost,link<simhost>>> to_remove = new ArrayList ();
+    List<Edge<simhost,link<simhost>>> to_remove = new ArrayList<> ();
 
     for (simhost h : network)
       if (h.gkc().k == min)
