@@ -1,10 +1,8 @@
-import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
 
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.Observer;
 
 import javax.swing.JFrame;
@@ -18,10 +16,8 @@ import basicp2psim.protocols.peer.peer;
 
 import agarnet.anipanel;
 import agarnet.framework.AbstractCliApp;
-import agarnet.link.*;
 import agarnet.protocols.*;
 import agarnet.variables.*;
-import agarnet.variables.atoms.*;
 
 /**
  * Basic test application to just create topologies and print them out, without
@@ -107,8 +103,8 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
   }
   
   @Override
-  protected void describe_end () {
-    super.describe_end ();
+  protected void describe_end (int runs) {
+    super.describe_end (runs);
     if (conf_adjmatrix.get ()) {
       System.out.println ("Adjacency matrix:");
       AdjacencyMatrix.sparse (System.out, network);

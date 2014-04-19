@@ -265,8 +265,8 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
   }
   
   @Override
-  protected void describe_begin () {
-    super.describe_begin ();
+  protected void describe_begin (int runs) {
+    super.describe_begin (runs);
     System.out.println ("numleeches: " + conf_leeches.get ());
     System.out.println ("Leeches: "
                         + TraversalMetrics.count (network, 
