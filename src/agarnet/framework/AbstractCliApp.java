@@ -423,7 +423,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   }
   
   private as_graph_reader.labeler<H,link<H>> asgraphlabeler () {
-    return new as_graph_reader.labeler<H,link<H>> () {
+    return new as_graph_reader.labeler<H, link<H>> () {
       final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
       final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
       final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
@@ -631,7 +631,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     
     try {
       as_graph_reader<H, link<H>> gr
-        = new as_graph_reader<H, link<H>> (network, asgraphlabeler (), fname);
+        = new as_graph_reader<> (network, asgraphlabeler (), fname);
       gr.parse ();
     } catch (FileNotFoundException e) {
       System.out.println ("Unable to open " + fname);
@@ -656,13 +656,17 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected void rewire () {
     TopologyConfigOption tconf = conf_topology;
     String type = tconf.get ();
-    
-    if (type.equals ("AdjMatrix"))
-      rewire_adjmatrix (tconf);
-    else if (type.equals ("ASGraph"))
-      rewire_asgraph (tconf);
-    else
-      rewire_alg (tconf, type);
+    switch (type) {
+      case "AdjMatrix":
+        rewire_adjmatrix (tconf);
+        break;
+      case "ASGraph":
+        rewire_asgraph (tconf);
+        break;
+      default:
+        rewire_alg (tconf, type);
+        break;
+    }
     
     if (conf_gui.get ())
       initial_layout ();
