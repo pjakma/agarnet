@@ -27,6 +27,7 @@ import agarnet.anipanel;
 import agarnet.as_graph_reader;
 import agarnet.link.*;
 import agarnet.protocols.host.AnimatableHost;
+import agarnet.protocols.protocol_stats.stat;
 import agarnet.variables.*;
 import agarnet.variables.atoms.*;
 import java.util.InputMismatchException;
@@ -74,11 +75,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
       .set (2);
   
-  protected static final IntConfigOption conf_runs = new IntConfigOption ("runs", 'r', "<runs>",
-      "# of simulation runs to make."
-          + " Edges are rewired, nodes reset.",
-      LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
-      .set (1);
+  protected static final NumberProbabilityConfigOption conf_runs
+    = new NumberProbabilityConfigOption ("runs", 'r', "<runs>",
+      "# of simulation runs to make. Edges are rewired, nodes reset.\n"
+      + "Either as an absolute number of runs of the simulation, otherwise as\n"
+      + "a proportion of # of edges if less than 1.",
+      LongOpt.REQUIRED_ARGUMENT).set (1);
   
   protected static final IntConfigOption conf_sleep = new IntConfigOption (
       "sleep", 's', "<sleep>",
@@ -558,7 +560,11 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
 
   @Override
   protected int get_runs () {
-    return conf_runs.get ();
+    float cruns = conf_runs.get ();
+    int runs = (int) cruns;
+    if (cruns < 1)
+      runs = (int) (this.network.link_count () * cruns);
+    return runs;
   }
 
   @Override
@@ -806,6 +812,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
                               return (test.getSize () == 0);
                           }}));
     if (get_runs () > 0) {
+      long nsent = 0;
+      for (H p : network)
+        nsent += p.stat_get (stat.sent);
+      if (nsent != sim_stats.get_messages_sent ())
+        System.out.printf ("Messages Sent Nodes %d != Sim %d!\n",
+                           nsent, sim_stats.get_messages_sent ());
       System.out.println ("Messages Sent: " + sim_stats.get_messages_sent ());
       System.out.println ("Converged: " + has_converged ());
       System.out.println ("Ticks: " + sim_stats.get_ticks ());
