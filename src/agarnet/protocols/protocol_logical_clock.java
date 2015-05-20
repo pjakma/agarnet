@@ -19,7 +19,12 @@ public class protocol_logical_clock<N extends Serializable> extends AbstractProt
   public long time () {
     return time;
   }
-  
+
+  public void reset () {
+    super.reset ();
+    prev = prev_dir.NONE;
+    time = 0;
+  }
   static public class logical_clock_msg implements agarnet.serialisable {
     final byte [] data;
     final long tstamp;
