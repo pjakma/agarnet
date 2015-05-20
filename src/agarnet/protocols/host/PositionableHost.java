@@ -18,7 +18,7 @@ public class PositionableHost<I extends Serializable,N>
   public PositionableHost (Simulation<I,N> sim,
                            boolean movable,
                            protocol<I> [] protocols) {
-    this.host = new host<I,N> (sim, protocols);
+    this.host = new host<> (sim, protocols);
     this.movable = movable;
     this.sim = sim;
   }
