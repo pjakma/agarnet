@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -42,8 +43,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   private PartitionGraph<H,link<H>> partition_graph;
   
   protected class sim_stats {
-    private long messages_sent = 0;
-    public long get_messages_sent () { return messages_sent; }
+    /* node Tx path is multi-threaded now */
+    private AtomicLong messages_sent = new AtomicLong ();
+    public long get_messages_sent () { return messages_sent.get (); }
     private long ticks;
     public long get_ticks () { return ticks; }
   }
@@ -218,12 +220,12 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
      * "setup the graph and describe it, but don't run the
      * "protocol"
      */
-    for (int i = 0; (i == 0 && get_runs () == 0) || i < get_runs (); i++) {
+    for (int i = 0; (i == 0 && get_runs () == 0) || i <= get_runs (); i++) {
       System.out.println ("\n# starting run " + i + " / " + get_runs ());
       
       network.plugObservable ();
       sim_stats.ticks = 0;
-      sim_stats.messages_sent = 0;
+      sim_stats.messages_sent.set (0);
       run_setup (i);
       setChanged ();
       notifyObservers ();
@@ -421,7 +423,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
     }
 
     setChanged ();
-    sim_stats.messages_sent++;
+    sim_stats.messages_sent.getAndIncrement ();
     
     return edge.label ().get (hto). offer (data);
   }
