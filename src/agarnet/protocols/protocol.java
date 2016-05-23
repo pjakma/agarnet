@@ -18,9 +18,15 @@ import agarnet.framework.tickable;
  * |p2 = protocol2 |
  * +---------------+
  * }
- * Data is passed as Objects (analogous to opaque byte streams in real network
- * stacks), and each layer encaps or decaps its meta-data as data goes down/up
- * the stack, just like a real network stack. 
+ *
+ * Data is passed as opaque byte streams (as in real network stacks), and
+ * each layer encaps or decaps its meta-data as data goes down/up the stack,
+ * just like a real network stack.
+ *
+ * The 'host' class provides a specialised 'protocol' implementation to
+ * contain a protocol stack, provide some cross-protocol stack services
+ * (e.g.  passing on notifications), and interact with the simulation
+ * framework.
  * 
  */
 public interface protocol<N> 
