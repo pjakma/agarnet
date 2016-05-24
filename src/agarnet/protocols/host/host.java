@@ -21,8 +21,6 @@ import java.io.Serializable;
  * @param <I> The type of the persistent, stable identifiers of hosts in the
  *            graph - this ID must be capable of being reliably serialised and
  *            deserialised to the same value.
- * @param <T> The type of a value the simulation uses to quickly between
- *            different kinds of hosts, for the purposes of the simulation.
  */
 public class host<I extends Serializable,N> extends AbstractProtocol<I> {
   protected protocol<I> [] protocols;
