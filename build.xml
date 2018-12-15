@@ -55,13 +55,14 @@
 	  </classpath>
 	</javac>
 
-	<java classname="org.junit.runner.JUnitCore" fork="true">
-	  <arg value="agarnet.link.test_unilink"/>
+	<junit printsummary="yes" haltonfailure="no">
+	  <test name="agarnet.link.test_unilink"/>
 	  <classpath>
             <path refid="project.tests.classpath"/>
             <path refid="project.class.path"/>
             <pathelement location="${tests.dir}"/>
+            <pathelement path="${junit.jar}"/>
 	  </classpath>
-	</java>
+	</junit>
     </target>
 </project>
