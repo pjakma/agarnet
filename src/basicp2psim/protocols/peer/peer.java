@@ -15,7 +15,7 @@ import agarnet.protocols.AbstractProtocol;
 import agarnet.protocols.protocol;
 
 public class peer<I,N> extends AbstractProtocol<I>
-					           implements PeerTemplate<I> {  
+                       implements PeerTemplate<I> {  
   /* track what's still to be sent to each neighbor */
   //Map<I, Queue<file>> neightxl = new HashMap<I, Queue<file>> ();
   /* Track what we know the neighbour must have in its DB */
