@@ -378,7 +378,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         
         if (cv.subopts != null)
           for (String bkey : cv.subopts.branch_keys ()) {
-            //debug.println (cv.subopts[i].toString ());
             
             for (String subkey : cv.subopts.subopt_keys (bkey)) {
               ObjectVar ov = cv.subopts.get (bkey, subkey);

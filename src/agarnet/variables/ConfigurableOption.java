@@ -127,7 +127,8 @@ public abstract class ConfigurableOption {
    * @param name
    * @param g
    */
-  public static int getopts (String name, String [] args, List<ConfigurableOption> confvars) {
+  public static int getopts (String name, String [] args,
+                             List<ConfigurableOption> confvars) {
     int c;
     LinkedList<LongOpt> lopts = new LinkedList<LongOpt> ();
     Map<Integer, ConfigurableOption> char2opt = new HashMap<> ();
@@ -137,7 +138,8 @@ public abstract class ConfigurableOption {
       char2opt.put (cv.lopt.getVal (), cv);
     }
     
-    Getopt g = new Getopt(name, args, ConfigurableOption.get_optstring (confvars),
+    Getopt g = new Getopt(name, args, 
+                          ConfigurableOption.get_optstring (confvars),
                           lopts.toArray (new LongOpt [0]));
     while ((c = g.getopt ()) != -1) {
       if (c == '?')
