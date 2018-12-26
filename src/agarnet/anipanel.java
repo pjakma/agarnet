@@ -10,6 +10,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
+//import java.awt.RenderingHints;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -119,27 +120,64 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
     
     return noderadius;
   }
-  protected void paintComponent (Graphics g1) {
+  
+  /** Transform from the simulation model co-ordinate reference system
+   * to the Java graphics context pixel space.
+   */ 
+  protected AffineTransform create_model_transform () {
+    /* In the simulation, the origin is the centre of the model bound (so,
+     * e.g., a node could be at (-100,-50) or (-170,50), etc.).  The Java
+     * graphics window has (0,0) top-left, as is common.
+     *
+     * Java thankfully provides a transform class to interpose between the
+     * two, and translate back and forth.
+     *
+     * Scale the sim. model to fit into the window, and
+     * linearly translate the co-ords from sim. space to java space. 
+     *
+     * HiDPI complicates things further.  HiDPI creates an additional level
+     * of scaling between the device pixels and the 'pixels' the AWT and
+     * Java Graphics API exposes to the user.  
+     *
+     * E.g., setting GDK_SCALE (e.g., for HiDPI displays) will set an
+     * underlying default transform in the GraphicsConfiguration, which
+     * should be preserved, otherwise the drawing will be shrunk relative to
+     * the window and mouse co-ords.  Once GDK_SCALE is set (i.e., no longer
+     * an identity transform) we end up with *3* co-ord systems:
+     *
+     * 1. The simulation model.
+     * 2. The Java Graphics2D abstract pixel space (as scaled).
+     * 3. The device pixels.
+     *
+     * The default transform on the Graphics2D context effectively creates
+     * 2.  We modify that further here below to be able to issue draws in
+     * terms of 1, correct for 3.  However, mouse events are reported still
+     * in terms of 2 - as sadly our transform gets cleared.
+     */
     Dimension d = this.getSize ();
-    Graphics2D g = (Graphics2D) g1;
-    double noderadius = noderadius ();
-    
     double scaleX = (double) d.width / s.model_size.width,
            scaleY = (double) d.height / s.model_size.height;
+    
+    AffineTransform t = new AffineTransform ();
+    // (0,0) at centre -> (0,0) top-left
+    t.translate (d.getWidth () / 2, d.getHeight () / (2));
+    t.scale (Math.min (scaleX, scaleY), Math.min (scaleX, scaleY));
+    
+    return t;
+  }
+  
+  protected void paintComponent (Graphics g1) {
+    Graphics2D g = (Graphics2D) g1;
+    double noderadius = noderadius ();
     
     super.paintComponent (g);
     
     /* Looks good, but is fantastically slow for some reason */
     //g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
     //                    RenderingHints.VALUE_ANTIALIAS_ON);
-    
-    AffineTransform t
-      = AffineTransform.getTranslateInstance (d.getWidth () / 2,
-                                              d.getHeight () / 2);
-    t.scale (Math.min (scaleX, scaleY), Math.min (scaleX, scaleY));
-    
+    AffineTransform model_transform = create_model_transform ();
     AffineTransform save = g.getTransform ();
-    g.setTransform (t);
+    g.transform (model_transform);
     
     if (textlabels)
       g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
@@ -157,6 +195,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
           
           Point2D pos2 = edge.to ().getPosition ();
           Vector2D vec = new Vector2D (pos2);
+
           vec.minus (pos);
           vec.times (0.5);
           vec.plus (pos);
@@ -184,6 +223,10 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
       
       if (mouse_in_panel) {
         mousep = new Point2D.Double ();
+        /* Mouse co-ordinates were reported with the default transform,
+         * in the abstract/scaled Java Graphics pixel space
+         */
+        AffineTransform t = model_transform;
         t.inverseTransform (new Point2D.Double (mouse_x, mouse_y), mousep);
         
         if (mouse_pressed_p != null) {
