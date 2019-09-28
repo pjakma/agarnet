@@ -55,6 +55,9 @@ public class host<I extends Serializable,N> extends AbstractProtocol<I> {
     protocol<I> lower = this;
     protocol<I> higher;
     
+    if (protocols.length == 0)
+      return;
+    
     for (int i = 0; i < protocols.length; i++) {
       higher = (i < protocols.length - 1) ? protocols[i + 1] : null;
       protocols[i].insert (higher, lower);
