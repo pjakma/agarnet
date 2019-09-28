@@ -612,6 +612,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         mcsfr.p (p.get ());
     }
     
+    System.out.println ("rewire_alg.... " + rw);
     rw.rewire ();
   }
   

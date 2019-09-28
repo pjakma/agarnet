@@ -53,6 +53,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   /**
    * Hook for concrete implementations, to allow Host object
    * to be retrieved, and possibly created, for any given Id.
+   *
+   * XXX: Should be factored out.
+   *
    * @param Long id of the host
    * @return Existing or new H host object for the given Id.
    */
