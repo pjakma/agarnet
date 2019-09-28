@@ -1,8 +1,5 @@
 package basicp2psim.protocols.peer.data;
 
-import java.io.ByteArrayInputStream;
-import java.io.Serializable;
-
 /*
  * This represents an anonymous block of data.
  * 
@@ -12,8 +9,7 @@ import java.io.Serializable;
  * large. a P2P system likely would need to be able to transfer information
  * describing blocks without actually having to transfer the data.
  */
-public class data_block implements Serializable {
-  private static final long serialVersionUID = 1527305443703235236L;
+public class data_block {
   final byte [] data;
   final block_descriptor bd;
   

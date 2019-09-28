@@ -9,7 +9,6 @@ import org.nongnu.multigraph.debug;
 
 import basicp2psim.protocols.peer.data.file;
 
-import agarnet.data.marshall;
 import agarnet.framework.Simulation;
 import agarnet.protocols.AbstractProtocol;
 import agarnet.protocols.protocol;
@@ -73,9 +72,9 @@ public class peer<I,N> extends AbstractProtocol<I>
     file f = null;
     
     try {
-      f = marshall.deserialise (f, data);
+      f = file.deserialise (data);
     } catch (Exception e) {
-      debug.println ("Unhandled message");
+      debug.println ("Unhandled message: " + e);
       return;
     }
 
@@ -144,7 +143,7 @@ public class peer<I,N> extends AbstractProtocol<I>
   }
   protected void send (I to, file msg) {    
     debug.printf ("peer %s: send %s to %s\n", this, msg, to);
-    send (to, msg);
+    super.send (to, msg);
   }
   
   @Override

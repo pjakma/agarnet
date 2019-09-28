@@ -1,11 +1,18 @@
 package basicp2psim.protocols.peer.data;
 
-import java.io.Serializable;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-public class file implements Iterable<block_descriptor>, Serializable {
+import org.nongnu.multigraph.debug;
+
+public class file implements Iterable<block_descriptor>, agarnet.serialisable {
   private static final long serialVersionUID = 2571143375373576236L;
   public final String name;
   List<block_descriptor> blocks;
@@ -19,7 +26,7 @@ public class file implements Iterable<block_descriptor>, Serializable {
     
     this.name = name;
     
-    if (data.length == 0)
+    if (data == null || data.length == 0)
       return;
     
     blocks = new LinkedList<block_descriptor> ();
@@ -56,5 +63,48 @@ public class file implements Iterable<block_descriptor>, Serializable {
   @Override
   public int hashCode () {
     return name.hashCode ();
+  }
+  
+  /* agarnet.serialisable */
+  public byte [] serialise () throws IOException {
+    ByteArrayOutputStream bos = new ByteArrayOutputStream ();
+    DataOutputStream dos = new DataOutputStream (bos);
+    
+    dos.writeUTF (name);
+    int datalen = 0;
+    for (block_descriptor bd: blocks) {
+      if (datalen < (Integer.MAX_VALUE - bd.d.data.length))
+        datalen += bd.d.data.length;
+      else
+        break;
+    }
+    dos.writeInt (datalen);
+    for (block_descriptor bd: blocks) {
+      if (datalen > 0) {
+        dos.write (bd.d.data);
+        datalen -= bd.d.data.length;
+      } else
+        break;
+    }
+    debug.printf ("%s, writing %d bytes (%d left)\n",
+                  this, dos.size(), datalen);
+    return bos.toByteArray ();
+  }
+  
+  public static file deserialise (byte [] b) throws IOException {
+    DataInputStream dis = new DataInputStream (new ByteArrayInputStream (b));
+    
+    String name = dis.readUTF ();
+    int datalen = dis.readInt ();
+    byte [] data = null;
+    
+    debug.printf ("name %s, datalen %d\n", name, datalen);
+    
+    if (datalen > 0) {
+      data = new byte[datalen];
+      if (dis.read (data) != data.length)
+        throw new IOException ("Data length mismatch!");
+    }
+    return new file (name, data);
   }
 }

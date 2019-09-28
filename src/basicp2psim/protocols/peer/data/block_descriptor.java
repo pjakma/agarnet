@@ -1,9 +1,6 @@
 package basicp2psim.protocols.peer.data;
 
-import java.io.Serializable;
-
-public class block_descriptor implements Serializable {
-  private static final long serialVersionUID = -4145678397886695109L;
+public class block_descriptor {
   public final file f;
   public data_block d;
 
