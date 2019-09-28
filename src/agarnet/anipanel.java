@@ -10,7 +10,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
-//import java.awt.RenderingHints;
+import java.awt.RenderingHints;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -113,8 +113,8 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
     //debug.println ("dmin: " + dmin + ", root(size): "
     //                + Math.sqrt (s.network.size ()));
     
-    //noderadius = Math.min (noderadius, 0.08 * dmin/Math.sqrt (s.network.size ()));
-    noderadius = 0.06 * dmin/Math.sqrt (s.network.size ());
+    noderadius = Math.min (noderadius, 0.1 * dmin/Math.sqrt (s.network.size ()));
+    //noderadius = 0.06 * dmin/Math.sqrt (s.network.size ());
     
     //debug.println ("" + noderadius);
     
@@ -173,8 +173,8 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
     super.paintComponent (g);
     
     /* Looks good, but is fantastically slow for some reason */
-    //g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
-    //                    RenderingHints.VALUE_ANTIALIAS_ON);
+    g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
     AffineTransform model_transform = create_model_transform ();
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
