@@ -49,9 +49,10 @@
 
     <target name="test" depends="jar">
         <mkdir dir="${tests.dir}" />
-        <javac srcdir="tests" destdir="${tests.dir}" source="1.6"
+        <javac srcdir="tests" destdir="${tests.dir}" source="1.8"
                debug="${compile.debug}" debuglevel="${compile.debug.level}"
                fork="${compile.fork}">
+          <compilerarg compiler="modern" value="-Xlint"/>
 	  <classpath id="project.tests.classpath">
             <path refid="project.class.path"/> 
             <pathelement location="${classes.dir}"/>
