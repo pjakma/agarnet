@@ -17,6 +17,10 @@
         <pathelement location="${getopt.jar}"/>
     </path>
 
+    <presetdef name="javac">
+        <javac includeantruntime="false" />
+    </presetdef>
+     
     <target name="clean">
         <delete dir="build"/>
     </target>
@@ -63,6 +67,7 @@
             <pathelement location="${tests.dir}"/>
             <pathelement path="${junit.jar}"/>
 	  </classpath>
+          <formatter type="plain" /> <!-- to file -->
 	</junit>
     </target>
 </project>
