@@ -9,6 +9,21 @@ import agarnet.framework.resetable;
 public class link<I> implements resetable {
   final unilink<I> ul1, ul2;
   
+  public link (I id1, I id2) {
+    this.ul1 = new unilink<> (id1);
+    this.ul2 = new unilink<> (id2);
+  }
+
+  public link (I id1, I id2, int bandwidth, int latency) {
+    this.ul1 = new unilink<> (id1, bandwidth, latency);
+    this.ul2 = new unilink<> (id2, bandwidth, latency);
+  }
+
+  public link (I id1, I id2, int bandwidth, int latency, int capacity) {
+    this.ul1 = new unilink<> (id1, bandwidth, latency, capacity);
+    this.ul2 = new unilink<> (id2, bandwidth, latency, capacity);
+  }
+  
   public link (unilink<I> l1, unilink<I> l2) {
     this.ul1 = l1;
     this.ul2 = l2;
