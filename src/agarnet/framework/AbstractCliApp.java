@@ -62,8 +62,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected link<H> _gen_link (H from, H to, int bandwidth,
                                int from_latency, int to_latency) {
     unilink<H> ul1, ul2;
-    ul1 = new unilink<> (from, bandwidth,
-                          from_latency);
+    ul1 = new unilink<> (from, bandwidth, from_latency);
     ul2 = new unilink<> (to, bandwidth, to_latency);
     return new link<> (ul1, ul2);
   }
