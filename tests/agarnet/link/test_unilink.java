@@ -116,7 +116,7 @@ public class test_unilink {
   private void testtxbuf2 (String test, int latency, int bandwidth, int padding) {
     link = new unilink<String> ("1", bandwidth, latency);
 
-    System.out.println ("\ntest " + test + " txbuf cmplex: "
+    debug.println ("test " + test + " txbuf cmplex: "
                          + " latency: " + latency
                          + " bandwidth: " + bandwidth
                          + " padding: " + padding);
@@ -135,10 +135,13 @@ public class test_unilink {
 
     /* how many more ticks needed for bandwidth? */
     int nummsgs = latency * 2;
-    int msgticks = (int) Math.ceil (msg (1,padding).length / bandwidth)
+    int msgticks = (int) Math.ceil (msg (1,padding).length / (double) bandwidth)
                    + latency;
     int totalticks = msgticks * nummsgs;
-
+    debug.println("nummsgs: " + nummsgs 
+                  + " msgticks: " + msgticks
+                  + " totalticks: " + totalticks); 
+    
     debug.println ("tick across");
     for (int i = latency; i < totalticks; i++) {
       link.tick ();
@@ -256,7 +259,7 @@ public class test_unilink {
       for (int lat = 1; lat <= 10; lat++) {
         int bw = (int)Math.ceil(Math.pow (2, b));
         for (int pad = 0; pad <= bw * 3; pad += pad + 1) {
-          System.out.println ("testbw " + bw + " " + pad);
+          debug.println ("testbw " + bw + " " + pad);
           testlatency ("bw", lat, bw, pad);
           testtxbuf ("bw", lat, bw, pad);
           testtxbuf2 ("bw", lat, bw, pad);
