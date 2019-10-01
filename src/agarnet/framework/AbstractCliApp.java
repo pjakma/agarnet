@@ -446,11 +446,10 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         if (e != null) {
           unilink<H> tul = e.label ().get (to);
           
-        return AbstractCliApp.this._gen_link (from, to, tul.bandwidth,
-                                              upscale (latency),
-                                              tul.latency);
+          return AbstractCliApp.this._gen_link (from, to, tul.bandwidth,
+                                                upscale (latency),
+                                                tul.latency);
         }
-        
         return _gen_link (from, to, bw, upscale (latency), upscale (latency));
       }
 
