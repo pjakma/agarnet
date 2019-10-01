@@ -49,7 +49,8 @@
 
     <target name="test" depends="jar">
         <mkdir dir="${tests.dir}" />
-        <javac srcdir="tests" destdir="${tests.dir}" source="1.8"
+        <javac srcdir="tests" destdir="${tests.dir}"
+               source="${compile.source}"
                debug="${compile.debug}" debuglevel="${compile.debug.level}"
                fork="${compile.fork}">
           <compilerarg compiler="modern" value="-Xlint"/>
