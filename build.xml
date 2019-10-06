@@ -3,6 +3,7 @@
     <property file="build.properties"/>
         
     <property name="src.dir"     value="src"/>
+    <property name="src.tests.dir" value="tests"/>
     <property name="build.dir"   value="build"/>
     <property name="multigraph.dir"   value="../MultiGraph"/>
     <property name="classes.dir" value="${build.dir}/classes"/>
@@ -11,6 +12,7 @@
     <property name="multigraph.jar"   value="${multigraph.dir}/${jar.dir}/MultiGraph.jar"/>
     <property name="getopt.jar" value="lib/gnu-getopt.jar"/>
     <property name="junit.jar"   value="lib/junit-4.jar" />
+    <property name="reports.dir" value="reports" />
 
     <path id="project.class.path">
         <pathelement location="${multigraph.jar}"/>
@@ -49,7 +51,8 @@
 
     <target name="test" depends="jar">
         <mkdir dir="${tests.dir}" />
-        <javac srcdir="tests" destdir="${tests.dir}"
+	<mkdir dir="${reports.dir}" />
+        <javac srcdir="${src.tests.dir}" destdir="${tests.dir}"
                source="${compile.source}"
                debug="${compile.debug}" debuglevel="${compile.debug.level}"
                fork="${compile.fork}">
@@ -61,7 +64,7 @@
 	  </classpath>
 	</javac>
 
-	<junit printsummary="yes" haltonfailure="no">
+	<junit printsummary="yes" haltonfailure="no" fork="off">
 	  <test name="agarnet.link.test_unilink"/>
 	  <classpath>
             <path refid="project.tests.classpath"/>
@@ -69,6 +72,12 @@
             <pathelement location="${tests.dir}"/>
             <pathelement path="${junit.jar}"/>
 	  </classpath>
+	  <batchtest todir="${reports.dir}">
+            <fileset dir="${src.tests.dir}">
+              <include name="**/test*.java"/>
+              <exclude name="**/AllTests.java"/>
+            </fileset>
+          </batchtest>
           <formatter type="plain" /> <!-- to file -->
 	</junit>
     </target>
