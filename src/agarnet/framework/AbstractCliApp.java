@@ -422,8 +422,8 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     return _node_labeller;
   }
   
-  private as_graph_reader.labeler<H,link<H>> asgraphlabeler () {
-    return new as_graph_reader.labeler<H, link<H>> () {
+  private as_graph_reader.latency_labeler<H,link<H>> asgraphlabeler () {
+    return new as_graph_reader.latency_labeler<H, link<H>> () {
       final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
       final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
       final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
@@ -437,7 +437,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         return l >= 1 ? l : 1;
       }
       
-      @Override
       public link<H> edge (H from, H to, double latency) {
         Edge<H,link<H>> e = network.edge (from, to);
         

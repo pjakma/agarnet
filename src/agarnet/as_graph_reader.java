@@ -53,10 +53,16 @@ import org.nongnu.multigraph.debug;
  * @param <N> Node type
  * @param <E> Edge type.
  */
-public class as_graph_reader<N,E> {
-  FileInputStream fis = null;
-  PushbackInputStream pb = null;
-  Scanner scr = null;
+public class as_graph_reader<N,E> extends adjacency_list_reader<N,E> {
+  /**
+   * Similar to the adjacency_list_reader.labeler, to allow the creation of
+   * node and edge labels to be delegated back to the user.
+   */
+  public interface latency_labeler<N,E> 
+         extends adjacency_list_reader.labeler<N,E> {
+    public E edge (N from, N to, double latency);
+  }
+  
   final static String sre_double = "(([.]\\d+)|\\d+([.]\\d+)?)";
   final static String sre_asn = "\\d+";
   final static String sre_asdot = "\\d+[.]\\d+";
@@ -66,18 +72,7 @@ public class as_graph_reader<N,E> {
   final static String sre_aslatency = "(" +sre_asn+ "),(" + sre_double + ")";
   final static Pattern re_asdot = Pattern.compile ("(\\d+)[.](\\d+)");
   final static Pattern re_asdot_irlbug = Pattern.compile ("(-?\\d+)[.](\\d+)");
-  private acceptpattern use_ap;
-  
-  private static abstract class acceptpattern {
-    final Pattern re;
-    final String name;
-    protected acceptpattern (String name, String re) {
-      this.name = name;
-      this.re = Pattern.compile (re);
-    }
-    abstract void parse_line (MatchResult res);
-  }
-  acceptpattern [] acceptpatterns;
+  private latency_labeler<N,E> labeler = null;
   
   private String normalise_asn (String asn) {
     Matcher res;
@@ -94,7 +89,9 @@ public class as_graph_reader<N,E> {
     }
     return asn;
   }
-  private void init_acceptpatterns () {
+  
+  @Override
+  protected void init_acceptpatterns () {
       acceptpatterns = new acceptpattern []{
         /* "ASN internal_latency [to_ASN_edge latency]+" format */
         new acceptpattern ("ASN latency list",
@@ -194,105 +191,19 @@ public class as_graph_reader<N,E> {
       };
   }
 
-  Graph<N,E> network;
-  as_graph_reader.labeler<N,E> labeler = null;
-
-  /**
-   * Interface for an edge labeler object, which the user must supply to the
-   * constructor of this class, allowsing the creation of edges to be
-   * delegated back to the user.
-   */
-  public interface labeler<N,E> {
-    public E edge (N from, N to, double latency);
-    public E edge (N from, N to);
-    public N node (String node);
-  }
-  
-  public void close () throws IOException {
-    if (pb != null)
-      pb.close ();
-    if (fis != null)
-      fis.close ();
-    if (scr != null)
-      scr.close ();
-  }
-  
-  @Override
-  protected void finalize () throws Throwable {
-    super.finalize ();
-    close ();
-  }
-
-  private InputStream get_inputstream (String fname) throws IllegalArgumentException,
-                                                            FileNotFoundException,
-                                                            IOException {
-    if (fname.contentEquals ("-"))
-      return System.in;
-    
-    fis = new FileInputStream (fname);
-    pb = new PushbackInputStream (fis, 2);
-    byte [] b = new byte [2];
-    
-    if (pb.read (b) < 2) {
-      fis.close ();
-      pb.close ();
-      throw new IllegalArgumentException ("file contains less than 2 bytes of data");
-    }
-    
-    pb.unread (b);
-    
-    if (b[0] == 31 && b[1] == -117)
-      return new GZIPInputStream (pb);
-    
-    return pb;
-    
-  }
-  
-  public as_graph_reader (Graph<N,E> network, as_graph_reader.labeler<N,E> labeler,
+  public as_graph_reader (Graph<N,E> network, 
+                       latency_labeler<N,E> labeler,
                        String fname) throws IllegalArgumentException,
                                             FileNotFoundException,
                                             IOException {
-    scr = new Scanner (get_inputstream (fname));
-    this.network = network;
+    super (network, fname);
     this.labeler = labeler;
   }
   
-  public as_graph_reader (Graph<N,E> network, as_graph_reader.labeler<N,E> labeler,
-                       InputStream is) {
-    scr = new Scanner (is);
-    this.network = network;
+  public as_graph_reader (Graph<N,E> network,
+                          latency_labeler<N,E> labeler,
+                          InputStream is) {
+    super (network, is);
     this.labeler = labeler;
-  }
-  
-  public void parse_line (String line) {
-    Matcher res;
-    
-    debug.println ("Parsing line:\n" + line);
-    
-    if (use_ap == null) {
-      for (acceptpattern ap : acceptpatterns) {
-        debug.println ("Try " + ap.name + ": " + ap.re.pattern ());
-        if (ap.re.matcher (line).matches ()) {
-          use_ap = ap;
-          return;
-        }
-      }
-    }
-    
-    if (use_ap != null && (res = use_ap.re.matcher (line)).matches ()) {
-      debug.printf ("matched: %s\n", res.group (0));
-      use_ap.parse_line (res);
-    } else {
-      throw new InputMismatchException ("Unrecognised input: "
-                                        + line);
-    }
-  }
-  
-  public void parse () throws IOException {
-    init_acceptpatterns ();
-    
-    while (scr.hasNextLine ())
-      parse_line (scr.nextLine ());
-    close ();
   }
 }
