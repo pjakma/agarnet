@@ -94,7 +94,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   
   static private class order_partition<N,E> implements PartitionCallbacks<N,E> {
     private int count = 0;
-    private int num = Math.max (Runtime.getRuntime ().availableProcessors () - 2, 1);;
+    private int num = Math.max (Runtime.getRuntime ().availableProcessors () - 2, 1);
     private Map<N,Integer> map = new HashMap<> ();
 
     @Override
