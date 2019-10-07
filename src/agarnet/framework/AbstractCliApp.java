@@ -24,6 +24,7 @@ import org.nongnu.multigraph.structure.kshell;
 import org.nongnu.multigraph.structure.kshell_node;
 
 import agarnet.anipanel;
+import agarnet.adjacency_list_reader;
 import agarnet.as_graph_reader;
 import agarnet.link.*;
 import agarnet.protocols.host.AnimatableHost;
@@ -109,6 +110,9 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         put ("ASGraph", new StringVar ("ASGraph",
             "Read in an AS-graph, to use"
             + " as the topology"
+        ));
+        put ("AdjList", new StringVar ("AdjList",
+            "Read in an adjacency-list file, to use as the topology"
         ));
         put ("Cartesian", new ObjectVar [] {
             new BooleanVar (
@@ -421,8 +425,73 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected NodeLabeler<H, link<H>> default_node_labeler () {
     return _node_labeller;
   }
+
+  /* adjacency-list / asgraph reader specific labellers */
+  protected class base_reader_labeler
+            implements adjacency_list_reader.labeler<H, link<H>> {
+    final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
+    final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
+    final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
+    final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
+    final int bw = gen_rand_in_range_inc ("bandwidth", maxbw, minbw);
+    final int lat = gen_rand_in_range_inc ("latency", maxlat, minlat);
+    
+    @Override
+    public link<H> edge (H from, H to) {
+      return _gen_link (from, to, bw, lat, lat);
+    }
+
+    @Override
+    public H node (String node) {
+      return id2node (node);
+    }
+  }
+
+  protected class adjlist_labeler
+                  extends base_reader_labeler
+                  implements adjacency_list_reader.weight_labeler<H, link<H>> {
+    public link<H> edge (H from, H to, int weight) {
+      Edge<H,link<H>> e = network.edge (from, to);
+      
+      /* We allow for assymetric latency */
+      if (e != null) {
+        unilink<H> tul = e.label ().get (to);
+        
+        return AbstractCliApp.this._gen_link (from, to, tul.bandwidth,
+                                              weight,
+                                              tul.latency);
+      }
+      return _gen_link (from, to, bw, weight, weight);
+    }
+  }
   
-  private as_graph_reader.latency_labeler<H,link<H>> asgraphlabeler () {
+  protected class asgraph_labeler
+                  extends base_reader_labeler
+                  implements as_graph_reader.latency_labeler<H, link<H>> {
+    /* Convert AS Graph seconds based latency to simulation tick latency */
+    private int upscale (double latency) {
+      int l = (int) Math.round (latency * 100);
+      
+      /* result must be >= 1 */
+      return l >= 1 ? l : 1;
+    }
+    
+    public link<H> edge (H from, H to, double latency) {
+      Edge<H,link<H>> e = network.edge (from, to);
+      
+      /* We allow for assymetric latency */
+      if (e != null) {
+        unilink<H> tul = e.label ().get (to);
+        
+        return AbstractCliApp.this._gen_link (from, to, tul.bandwidth,
+                                              upscale (latency),
+                                              tul.latency);
+      }
+      return _gen_link (from, to, bw, upscale (latency), upscale (latency));
+    }
+  }
+
+  private as_graph_reader.latency_labeler<H,link<H>> asgraphlabeler_foo () {
     return new as_graph_reader.latency_labeler<H, link<H>> () {
       final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
       final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
@@ -430,6 +499,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
       final int bw = gen_rand_in_range_inc ("bandwidth", maxbw, minbw);
       final int lat = gen_rand_in_range_inc ("latency", maxlat, minlat);
+      /* Convert AS Graph seconds based latency to simulation tick latency */
       private int upscale (double latency) {
         int l = (int) Math.round (latency * 100);
         
@@ -461,7 +531,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
         return id2node (node);
       }};
   }
-  
+
   public AbstractCliApp (Dimension d) {
     super (d);
     setup_debug ();
@@ -631,10 +701,9 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   /* rewire the graph from a file input of topology */
   private void rewire_asgraph (TopologyConfigOption tconf) {
     String fname = ((StringVar)tconf.subopts.get (tconf.get (), "ASGraph")).get ();
-    
     try {
       as_graph_reader<H, link<H>> gr
-        = new as_graph_reader<> (network, asgraphlabeler (), fname);
+        = new as_graph_reader<> (network, new asgraph_labeler (), fname);
       gr.parse ();
     } catch (FileNotFoundException e) {
       System.out.println ("Unable to open " + fname);
@@ -654,7 +723,34 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       System.exit (1);
     }
   }
-  
+  /* TODO: Factor out common stuff with above. Would probably require
+   * Class<...>.getConstructor based magic.
+   */
+  private void rewire_adjlist (TopologyConfigOption tconf) {
+    String fname = ((StringVar)tconf.subopts.get (tconf.get (), "AdjList")).get ();
+    try {
+      adjacency_list_reader<H, link<H>> r
+        = new adjacency_list_reader<> (network, new adjlist_labeler (), fname);
+      r.parse ();
+    } catch (FileNotFoundException e) {
+      System.out.println ("Unable to open " + fname);
+      System.exit (1);
+    } catch (InputMismatchException e) {
+      System.out.println ("Error parsing + " + fname + ": " + e.getMessage ());
+      System.exit (1);
+    } catch (IOException e) {
+      System.out.println ("I/O error parsing " + fname);
+      System.out.println (e.getCause ());
+      System.exit (1);
+    } catch (Exception e) {
+      System.out.print ("Exception parsing " + fname);
+      if (e.getMessage () != null)
+        System.out.println (": " + e.getMessage ());
+      e.printStackTrace ();
+      System.exit (1);
+    }
+  }
+    
   @Override
   protected void rewire () {
     TopologyConfigOption tconf = conf_topology;
@@ -662,6 +758,9 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     switch (type) {
       case "AdjMatrix":
         rewire_adjmatrix (tconf);
+        break;
+      case "AdjList":
+        rewire_adjlist (tconf);
         break;
       case "ASGraph":
         rewire_asgraph (tconf);
@@ -679,10 +778,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected void initial_setup () {
     /* file based? Then its done on each rewire */
     if (conf_topology != null && conf_topology.get () != null) {
-      if (conf_topology.get ().equals ("AdjMatrix"))
-        return;
-      if (conf_topology.get ().equals ("ASGraph"))
-        return;
+      switch (conf_topology.get ()) {
+        case "AdjMatrix":
+        case "AdjList":
+        case "ASGraph":
+          return;
+      }
     }
     
     /* otherwise, hosts may need to be created initially,
