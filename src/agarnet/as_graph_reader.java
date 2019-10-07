@@ -60,7 +60,7 @@ public class as_graph_reader<N,E> extends adjacency_list_reader<N,E> {
    */
   public interface latency_labeler<N,E> 
          extends adjacency_list_reader.labeler<N,E> {
-    public E edge (N from, N to, double latency);
+    public E getEdge (N from, N to, double latency);
   }
   
   final static String sre_double = "(([.]\\d+)|\\d+([.]\\d+)?)";
@@ -100,15 +100,15 @@ public class as_graph_reader<N,E> extends adjacency_list_reader<N,E> {
                                    +sre_aslatency+ ")+\\s*$") {
           @Override
           void parse_line (MatchResult m) {
-            N from_as = labeler.node (m.group (1));
+            N from_as = labeler.getNode (m.group (1));
             @SuppressWarnings ("unused")
             double from_as_latency = Double.parseDouble (m.group (2));
 
             for (int i = 3; i < m.groupCount (); i++) {
               //MatchResult m = scr.match ();
-              N to_as = labeler.node (m.group (i));
+              N to_as = labeler.getNode (m.group (i));
               double to_as_latency = Double.parseDouble (m.group (i + 1));
-              E newlabel = labeler.edge (from_as, to_as, to_as_latency);
+              E newlabel = labeler.getEdge (from_as, to_as, to_as_latency);
 
               debug.printf ("setting %s to %s\n", from_as, to_as);
 
@@ -129,14 +129,14 @@ public class as_graph_reader<N,E> extends adjacency_list_reader<N,E> {
                                           sre_asn, sre_asn) ) {
           @Override
           void parse_line (MatchResult m) {
-            N from_as = labeler.node (m.group (1));
-            N to_as = labeler.node (m.group (2));
+            N from_as = labeler.getNode (m.group (1));
+            N to_as = labeler.getNode (m.group (2));
 
             debug.printf ("setting %s (%s) to %s (%s)\n",
                          from_as, m.group (1), to_as, m.group (2));
 
             network.remove (from_as, to_as);
-            network.set (from_as, to_as, labeler.edge (from_as, to_as));
+            network.set (from_as, to_as, labeler.getEdge (from_as, to_as));
           }
         },
         /* Old IRL topology links format is supposed to be:
@@ -178,14 +178,14 @@ public class as_graph_reader<N,E> extends adjacency_list_reader<N,E> {
             
             String sfrom = m.group (first);
             String sto = m.group (first + 1);
-            N from_as = labeler.node (normalise_asn (sfrom));
-            N to_as = labeler.node (normalise_asn (sto));
+            N from_as = labeler.getNode (normalise_asn (sfrom));
+            N to_as = labeler.getNode (normalise_asn (sto));
 
             debug.printf ("setting %s (%s) to %s (%s)\n",
                          from_as, sfrom, to_as, sto);
 
             network.remove (from_as, to_as);
-            network.set (from_as, to_as, labeler.edge (from_as, to_as));
+            network.set (from_as, to_as, labeler.getEdge (from_as, to_as));
           }
         }
       };

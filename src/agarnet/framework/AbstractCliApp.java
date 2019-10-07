@@ -398,10 +398,14 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
           final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
           final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
           @Override
-          public link<H> getLabel (H from, H to) {
+          public link<H> getEdge (H from, H to) {
             int bw = gen_rand_in_range_inc ("Bandwidth", maxbw, minbw);
             int lat = gen_rand_in_range_inc ("Latency", maxlat, minlat);
             return _gen_link (from, to, bw, lat, lat);
+          }
+          @Override
+          public link<H> getLabel (H from, H to) {
+            return getEdge (from, to);
           }
        };
     return _default_edge_labeler;
@@ -430,12 +434,16 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     final int lat = gen_rand_in_range_inc ("latency", maxlat, minlat);
     
     @Override
-    public link<H> edge (H from, H to) {
+    public link<H> getEdge (H from, H to) {
       return _gen_link (from, to, bw, lat, lat);
+    }
+    @Override
+    public link<H> getLabel (H from, H to) {
+      return getEdge (from, to);
     }
 
     @Override
-    public H node (String node) {
+    public H getNode (String node) {
       return id2node (node);
     }
   }
@@ -443,7 +451,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
   protected class adjlist_labeler
                   extends base_reader_labeler
                   implements adjacency_list_reader.weight_labeler<H, link<H>> {
-    public link<H> edge (H from, H to, int weight) {
+    public link<H> getEdge (H from, H to, int weight) {
       Edge<H,link<H>> e = network.edge (from, to);
       
       /* We allow for assymetric latency */
@@ -475,7 +483,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       return l >= 1 ? l : 1;
     }
     
-    public link<H> edge (H from, H to, double latency) {
+    public link<H> getEdge (H from, H to, double latency) {
       Edge<H,link<H>> e = network.edge (from, to);
       
       /* We allow for assymetric latency */

@@ -16,6 +16,8 @@ import java.util.zip.GZIPInputStream;
 import java.awt.Color;
 
 import org.nongnu.multigraph.Graph;
+import org.nongnu.multigraph.NodeLabeler;
+import org.nongnu.multigraph.EdgeLabeler;
 import org.nongnu.multigraph.debug;
 
 import agarnet.framework.Coloured;
@@ -57,12 +59,9 @@ public class adjacency_list_reader<N,E> {
    * Slightly different requirements/context means MultiGraph.EdgeLabeler
    * would be too awkard to re-use here.
    */
-  public interface labeler<N,E> {
-    public E edge (N from, N to);
-    public N node (String node);
-  }
+  public interface labeler<N,E> extends NodeLabeler<N,E>, EdgeLabeler<N,E> {}
   public interface weight_labeler<N,E> extends labeler<N,E> {
-    public E edge (N from, N to, int weight);
+    public E getEdge (N from, N to, int weight);
   }
   
   FileInputStream fis = null;
@@ -97,14 +96,14 @@ public class adjacency_list_reader<N,E> {
         void parse_line (MatchResult m) {
           String sfrom = m.group (2) != null ? m.group(2) : m.group(3);
           String sto = m.group (5) != null ?  m.group(5) : m.group(6);
-          N from = labeler.node (sfrom);
-          N to = labeler.node (sto);
+          N from = labeler.getNode (sfrom);
+          N to = labeler.getNode (sto);
 
           debug.printf ("setting %s (%s) to %s (%s)\n",
                        from, sfrom, to, sto);
 
           network.remove (from, to);
-          network.set (from, to, labeler.edge (from, to));
+          network.set (from, to, labeler.getEdge (from, to));
         }
       },
       /* "Node Node <weight>" format */
@@ -115,10 +114,10 @@ public class adjacency_list_reader<N,E> {
         void parse_line (MatchResult m) {
           String sfrom = m.group (2) != null ? m.group(2) : m.group(3);
           String sto = m.group (5) != null ?  m.group(5) : m.group(6);
-          N from = labeler.node (sfrom);
-          N to = labeler.node (sto);
+          N from = labeler.getNode (sfrom);
+          N to = labeler.getNode (sto);
           int weight = Integer.parseInt (m.group (7));
-          E edge = labeler.edge (from, to, weight);
+          E edge = labeler.getEdge (from, to, weight);
 
           debug.printf ("setting %s (%s) to %s (%s), Edge %s (%f)\n",
                        from, sfrom, to, sto, edge, weight);
@@ -135,8 +134,8 @@ public class adjacency_list_reader<N,E> {
         void parse_line (MatchResult m) {
           String sfrom = m.group (2) != null ? m.group(2) : m.group(3);
           String sto = m.group (6) != null ?  m.group(6) : m.group(7);
-          N from = labeler.node (sfrom);
-          N to = labeler.node (sto);
+          N from = labeler.getNode (sfrom);
+          N to = labeler.getNode (sto);
           Color from_colour = Color.decode (m.group (4));
           Color to_colour = Color.decode (m.group (8));
 
@@ -148,7 +147,7 @@ public class adjacency_list_reader<N,E> {
                        from, sfrom, from_colour,
                        to, sto, to_colour);
           network.remove (from, to);
-          network.set (from, to, labeler.edge (from, to));
+          network.set (from, to, labeler.getEdge (from, to));
         }
       },
       /* "Node RGB Node RGB weight" format */
@@ -161,12 +160,12 @@ public class adjacency_list_reader<N,E> {
         void parse_line (MatchResult m) {
           String sfrom = m.group (2) != null ? m.group(2) : m.group(3);
           String sto = m.group (6) != null ?  m.group(6) : m.group(7);
-          N from = labeler.node (sfrom);
-          N to = labeler.node (sto);
+          N from = labeler.getNode (sfrom);
+          N to = labeler.getNode (sto);
           Color from_colour = Color.decode (m.group (4));
           Color to_colour = Color.decode (m.group (8));
           int weight = Integer.parseInt (m.group (9));
-          E edge = labeler.edge (from, to, weight);
+          E edge = labeler.getEdge (from, to, weight);
 
 
           if (from instanceof Coloured) {

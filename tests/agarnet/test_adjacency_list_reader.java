@@ -115,15 +115,19 @@ public class test_adjacency_list_reader {
   labeler () {
     return new adjacency_list_reader.weight_labeler<test_node, test_edge> () {
       @Override
-      public test_edge edge (test_node from, test_node to) {
+      public test_edge getEdge (test_node from, test_node to) {
         return new test_adjacency_list_reader.test_edge (from, to);
       }
       @Override
-      public test_edge edge (test_node from, test_node to, int weight) {
+      public test_edge getEdge (test_node from, test_node to, int weight) {
         return new test_adjacency_list_reader.test_edge (from, to, weight);
       }
       @Override
-      public test_node node (String node) {
+      public test_edge getLabel (test_node from, test_node to) {
+        return getEdge (from, to);
+      }
+      @Override
+      public test_node getNode (String node) {
         return new test_adjacency_list_reader.test_node (node);
       }
     };
