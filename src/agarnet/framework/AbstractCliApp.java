@@ -496,47 +496,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     return _default_asgraph_labeler;
   }
 
-  private as_graph_reader.latency_labeler<H,link<H>> asgraphlabeler_foo () {
-    return new as_graph_reader.latency_labeler<H, link<H>> () {
-      final int maxbw  = ((IntVar) conf_link.subopts.get ("maxbw")).get ();
-      final int minbw  = ((IntVar) conf_link.subopts.get ("minbw")).get ();
-      final int maxlat = ((IntVar) conf_link.subopts.get ("maxlat")).get ();
-      final int minlat = ((IntVar) conf_link.subopts.get ("minlat")).get ();
-      final int bw = gen_rand_in_range_inc ("bandwidth", maxbw, minbw);
-      final int lat = gen_rand_in_range_inc ("latency", maxlat, minlat);
-      /* Convert AS Graph seconds based latency to simulation tick latency */
-      private int upscale (double latency) {
-        int l = (int) Math.round (latency * 100);
-        
-        /* result must be >= 1 */
-        return l >= 1 ? l : 1;
-      }
-      
-      public link<H> edge (H from, H to, double latency) {
-        Edge<H,link<H>> e = network.edge (from, to);
-        
-        /* We allow for assymetric latency */
-        if (e != null) {
-          unilink<H> tul = e.label ().get (to);
-          
-          return AbstractCliApp.this._gen_link (from, to, tul.bandwidth,
-                                                upscale (latency),
-                                                tul.latency);
-        }
-        return _gen_link (from, to, bw, upscale (latency), upscale (latency));
-      }
-
-      @Override
-      public link<H> edge (H from, H to) {
-        return _gen_link (from, to, bw, lat, lat);
-      }
-
-      @Override
-      public H node (String node) {
-        return id2node (node);
-      }};
-  }
-
   public AbstractCliApp (Dimension d) {
     super (d);
     setup_debug ();
