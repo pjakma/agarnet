@@ -56,9 +56,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       return min;
     return min + r.nextInt (max - min + 1);
   }
-  //protected link<H> _gen_link (H from, H to,
-  //                             int maxbandwidth, int minbandwidth,
-  //                             int maxlatency, int minlatency) {
     
   protected link<H> _gen_link (H from, H to, int bandwidth,
                                int from_latency, int to_latency) {
@@ -93,10 +90,6 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       "width and height of the simulation model",
       LongOpt.REQUIRED_ARGUMENT).set (new Dimension (1200, 800));
   
-  /*Eclipse insists the following cast is required.. Absolutely bizarre 
-   * The standard javac compiler is fine without the cast.
-   * Bizarre bug in the internal java compiler of Eclipse it seems.
-   */
   protected static final TopologyConfigOption conf_topology
     = (TopologyConfigOption) new TopologyConfigOption (
       "topology", 't', "<topology>[,<topology specific options>]",
