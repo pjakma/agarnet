@@ -70,7 +70,7 @@ public class adjacency_list_reader<N,E> {
   Scanner scr = null;
   final static String sre_float = "[+-]?(?:\\d*[.])?\\d+";
   final static String sre_int = "\\d+";
-  final static String sre_str = "(\\p{Alnum}+)|\"(\\p{Alnum}+)\"";
+  final static String sre_str = "([\\p{Alnum}-_.]+)|\"([\\p{Alnum}-_.]+)\"";
   final static String sre_rgb = "#[a-fA-F0-9]{6}";
   private acceptpattern use_ap;
   Graph<N,E> network;
