@@ -457,6 +457,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       return _gen_link (from, to, bw, weight, weight);
     }
   }
+  private adjlist_labeler _default_adjlist_labeler = null;
+  protected adjlist_labeler default_adjlist_labeler () {
+    if (_default_adjlist_labeler == null)
+       _default_adjlist_labeler = new adjlist_labeler ();
+    return _default_adjlist_labeler;
+  }
   
   protected class asgraph_labeler
                   extends base_reader_labeler
@@ -482,6 +488,12 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       }
       return _gen_link (from, to, bw, upscale (latency), upscale (latency));
     }
+  }
+  private asgraph_labeler _default_asgraph_labeler = null;
+  protected asgraph_labeler default_asgraph_labeler () {
+    if (_default_asgraph_labeler == null)
+       _default_asgraph_labeler = new asgraph_labeler ();
+    return _default_asgraph_labeler;
   }
 
   private as_graph_reader.latency_labeler<H,link<H>> asgraphlabeler_foo () {
@@ -696,7 +708,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     String fname = ((StringVar)tconf.subopts.get (tconf.get (), "ASGraph")).get ();
     try {
       as_graph_reader<H, link<H>> gr
-        = new as_graph_reader<> (network, new asgraph_labeler (), fname);
+        = new as_graph_reader<> (network, default_asgraph_labeler (), fname);
       gr.parse ();
     } catch (FileNotFoundException e) {
       System.out.println ("Unable to open " + fname);
@@ -723,7 +735,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     String fname = ((StringVar)tconf.subopts.get (tconf.get (), "AdjList")).get ();
     try {
       adjacency_list_reader<H, link<H>> r
-        = new adjacency_list_reader<> (network, new adjlist_labeler (), fname);
+        = new adjacency_list_reader<> (network, default_adjlist_labeler (), fname);
       r.parse ();
     } catch (FileNotFoundException e) {
       System.out.println ("Unable to open " + fname);
