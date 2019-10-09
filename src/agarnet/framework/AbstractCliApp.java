@@ -95,6 +95,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
       "topology", 't', "<topology>[,<topology specific options>]",
       "topology of graph, i.e. how nodes are linked together",
       LongOpt.REQUIRED_ARGUMENT,
+      /* XXX: Do something better than static init of anon classes */
       new ConfigOptionSet () {{
         put ("AdjMatrix", new StringVar ("AdjMatrix",
                                     "Read in an adjacency-matrix to use"
