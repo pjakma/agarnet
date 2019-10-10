@@ -13,24 +13,25 @@ import java.awt.geom.Point2D;
 import java.awt.RenderingHints;
 import java.util.Observable;
 import java.util.Observer;
+import java.io.Serializable;
 
 import javax.swing.JPanel;
 
 import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.layout.Vector2D;
 
-import agarnet.framework.Simulation;
+import agarnet.framework.Simulation2D;
 import agarnet.link.link;
 import agarnet.protocols.host.AnimatableHost;
 
-public class anipanel<I, H extends AnimatableHost<Long,H>>
+public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
 		extends JPanel
 		implements Observer {
   /**
    * 
    */
   private static final long serialVersionUID = 4635455780045359317L;
-  Simulation<I,H> s;
+  Simulation2D<I,H> s;
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
   private boolean mouse_in_panel = false;
@@ -40,7 +41,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
   private Point mouse_pressed_p;
   private H host_dragging;
   
-  public anipanel (Simulation<I,H> s) {
+  public anipanel (Simulation2D<I,H> s) {
     this.s = s;
     
     s.addObserver (this);
@@ -276,7 +277,7 @@ public class anipanel<I, H extends AnimatableHost<Long,H>>
                       (int)(pos.getY () + noderadius), 
                       (int) noderadius * 2, (int)noderadius * 2);
           g.setColor (Color.red);
-          g.drawString (Long.toString (p.getId ()),
+          g.drawString (p.getId ().toString (),
                         (int)(pos.getX () - (noderadius * 0.75)),
                         (int)(pos.getY () + (noderadius * 2)));
         }

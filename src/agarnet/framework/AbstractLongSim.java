@@ -25,16 +25,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
- * An abstract simulation, implementing a framework for a simulation using Long
- * identifiers and PositionableHosts. Hooks are provided for concrete implementations
- * to update the state of nodes at appropriate points.
+ * An abstract simulation, implementing a framework for a simulation of H
+ * hosts identified by I ids.  Hooks are provided for concrete
+ * implementations to update the state of nodes at appropriate points.
+ *
  * @author paul
  *
  * @param <T>
  * @param <H>
  */
-public abstract class AbstractLongSim<H extends PositionableHost<Long,H>> 
-				extends Simulation<Long,H>
+public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
+				extends Simulation2D<Long,H>
 				implements Observer {
   /* so we can ignore observer events initially */
   protected boolean doing_network_setup = true;

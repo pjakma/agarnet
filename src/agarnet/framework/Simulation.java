@@ -1,6 +1,5 @@
 package agarnet.framework;
 
-import java.awt.Dimension;
 import java.util.Observable;
 import java.util.Set;
 import org.nongnu.multigraph.*;
@@ -10,16 +9,15 @@ import agarnet.link.link;
 /**
  * This class represents the Simulation to hosts within the Simulation. It is
  * the interface though which hosts interact with the underlying Simulation.
+ *
  * @author paul
  * @param <I> The Id type used to identify hosts nodes
  * @param <H> The type used for Hosts in the Simulation
  */
 public abstract class Simulation<I,H> extends Observable {
   public final Graph<H,link<H>> network;
-  public final Dimension model_size;
   
-  public Simulation (Graph<H,link<H>> g, Dimension d) {
-    this.model_size = d;
+  public Simulation (Graph<H,link<H>> g) {
     this.network = g;
   }
 	
@@ -49,12 +47,12 @@ public abstract class Simulation<I,H> extends Observable {
    *
    * @param node The node object to retrieve the I typed Id for
    * @return The Id of the given node
-	 */
-   abstract public I node2id(H node);
-   /**
-	 * retrieve the appropriate Host for the given ID
+   */
+  abstract public I node2id(H node);
+  /**
+   * retrieve the appropriate Host for the given ID
    * @param node the node Id to lookup
    * @return the Host object for the given Id
-	 */
+   */
    abstract public H id2node (I node);
 }
