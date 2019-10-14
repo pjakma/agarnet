@@ -11,27 +11,29 @@ import java.util.Map;
 /**
  * map Graph node objects to stable, persistent IDs that protocols can use
  * @author paul
+ * @params I The I-type to use for identifiers of nodes.
+ * @params N The N-type to use for the node objects.
  */
 
-public class idmap<N> {
-  Map<Long,N> id2simh = new HashMap<Long,N> ();
-  Map<N,Long> simh2id = new HashMap<N,Long> ();
+public class idmap<I, N> {
+  Map<I,N> id2simh = new HashMap<I,N> ();
+  Map<N,I> simh2id = new HashMap<N,I> ();
 
-  public Long get (N n) {
+  public I getId (N n) {
     if (n == null)
       throw new AssertionError ("idmap: node must not be null!");
 
     return simh2id.get (n);
   }
 
-  public void put (Long l, N n) {
+  public void put (I l, N n) {
     if (n == null)
       throw new AssertionError ("idmap put: node must not be null!");
     if (l == null)
-      throw new AssertionError ("idmap put: Long key must not be null!");
+      throw new AssertionError ("idmap put: Id key must not be null!");
 
     if (id2simh.get (l) != null)
-      throw new AssertionError ("idmap put: Long key already exists!");
+      throw new AssertionError ("idmap put: I key already exists!");
     if (simh2id.get (n) != null)
       throw new AssertionError ("idmap put: Node already registered!");
 
@@ -42,7 +44,7 @@ public class idmap<N> {
 
     return;
   }
-  public N get (Long l) {
+  public N getNode (I l) {
     return id2simh.get (l);
   }
 
@@ -52,9 +54,9 @@ public class idmap<N> {
     for (N s : simh2id.keySet ()) {
       sb.append (s);
       sb.append (" -> ");
-      sb.append (get (s));
+      sb.append (getId (s));
       sb.append (" (back?: ");
-      sb.append (id2simh.containsKey (get(s)));
+      sb.append (id2simh.containsKey (getId(s)));
       sb.append (")\n");
     }
     return sb.toString ();

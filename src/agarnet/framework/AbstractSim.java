@@ -22,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.io.Serializable;
 
 
 /**
@@ -34,12 +35,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * @param <T>
  * @param <H>
  */
-public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
-				extends Simulation2D<Long,H>
-				implements Observer {
+public abstract class AbstractSim<I extends Serializable, 
+                                  H extends PositionableHost<I,H>>
+                extends Simulation2D<I,H>
+                implements Observer {
   /* so we can ignore observer events initially */
   protected boolean doing_network_setup = true;
-  protected idmap<H> idmap = new sync_idmap<> ();
+  protected idmap<I,H> idmap = new sync_idmap<> ();
   protected sim_stats sim_stats = new sim_stats ();
   private PartitionGraph<H,link<H>> partition_graph;
   
@@ -57,40 +59,23 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
    *
    * XXX: Should be factored out.
    *
-   * @param Long id of the host
+   * @param Id of the host
    * @return Existing or new H host object for the given Id.
    */
-  protected abstract H get_host (Long id);
+  protected abstract H get_host (I id);
   
-  public void new_node (Long id, H s) {
+  public void new_node (I id, H s) {
     idmap.put (id, s);
   }
   
   @Override
-  public Long node2id (H s) {
-    return idmap.get (s);
+  public I node2id (H s) {
+    return idmap.getId (s);
   }
   
   @Override
-  public H id2node (Long l) {
-    return idmap.get (l);
-  }
-  
-  public H id2node (String sl) {
-    long l;
-    H n;
-    
-    try {
-      l = Long.parseLong (sl);
-    } catch (NumberFormatException e) {
-      debug.println (debug.levels.WARNING, "Invalid host identifier: " + sl);
-      return null;
-    }
-    
-    if ((n = id2node (l)) != null)
-      return n;
-    
-    return get_host (l);
+  public H id2node (I l) {
+    return idmap.getNode (l);
   }
   
   static private class order_partition<N,E> implements PartitionCallbacks<N,E> {
@@ -118,7 +103,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       return partition;
     }
   }
-  public AbstractLongSim (Dimension d) {
+  public AbstractSim (Dimension d) {
     super (new PartitionGraph<H,link<H>> (new order_partition<H,link<H>> ()), d);
     partition_graph = (PartitionGraph<H, link<H>>) network;
     network.addObserver (this);
@@ -378,10 +363,10 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   }
   
   @Override
-  final public Set<Long> connected (Long node) {
-    Set<Long> ids = new HashSet<> ();
-    for (H s : network.successors (idmap.get (node)))
-        ids.add (idmap.get (s));
+  final public Set<I> connected (I node) {
+    Set<I> ids = new HashSet<> ();
+    for (H s : network.successors (idmap.getNode (node)))
+        ids.add (idmap.getId (s));
     return ids;
   }
   
@@ -402,7 +387,7 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
       /* dequeue from the link */
       while ((data = ul.poll ()) != null) {
         //debug.out.printf ("dequeue from %s up to %s, edge: %s\n", e.to (), h, e);
-        h.up (idmap.get (e.to ()), data);
+        h.up (idmap.getId (e.to ()), data);
       }
       
       if (ul.size () > 0) {
@@ -413,9 +398,9 @@ public abstract class AbstractLongSim<H extends PositionableHost<Long,H>>
   }
   
   @Override
-  final public boolean tx (Long from, Long to, byte [] data) {
-    H hfrom = idmap.get (from);
-    H hto = idmap.get (to);
+  final public boolean tx (I from, I to, byte [] data) {
+    H hfrom = idmap.getNode (from);
+    H hto = idmap.getNode (to);
     Edge<H, link<H>> edge = network.edge (hfrom, hto);
     
     debug.printf ("tx %d to %d, edge: %s\n", from, to, edge);

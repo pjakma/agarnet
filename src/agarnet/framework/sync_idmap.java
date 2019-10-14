@@ -1,29 +1,24 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package agarnet.framework;
 
 /**
- *
+ * Synchronised, thread-safe version of idmap.
  * @author paul
  */
-public class sync_idmap<N> extends idmap<N> {
-  private idmap<N> idmap = new idmap<N> ();
+public class sync_idmap<I, N> extends idmap<I, N> {
+  private idmap<I, N> idmap = new idmap<> ();
 
   @Override
-  public synchronized Long get (N n) {
-    return idmap.get (n);
+  public synchronized I getId (N n) {
+    return idmap.getId (n);
   }
 
   @Override
-  public synchronized void put (Long l, N n) {
+  public synchronized void put (I l, N n) {
     idmap.put (l, n);
   }
   @Override
-  public synchronized N get (Long l) {
-    return idmap.get (l);
+  public synchronized N getNode (I l) {
+    return idmap.getNode (l);
   }
 
   @Override

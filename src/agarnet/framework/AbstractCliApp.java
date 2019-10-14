@@ -43,7 +43,7 @@ import java.util.InputMismatchException;
  * @param <H> The simulation host type.
  */
 public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_node>
-                extends AbstractLongSim<H> {
+                extends AbstractSim<Long, H> {
   /* Force layout can be re-used while the sim runs */
   protected Random r = new Random ();
   protected anipanel<Long, H> ap;
@@ -410,6 +410,23 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
           }
        };
     return _default_edge_labeler;
+  }
+  
+  public H id2node (String sl) {
+    long l;
+    H n;
+    
+    try {
+      l = Long.parseLong (sl);
+    } catch (NumberFormatException e) {
+      debug.println (debug.levels.WARNING, "Invalid host identifier: " + sl);
+      return null;
+    }
+    
+    if ((n = id2node (l)) != null)
+      return n;
+
+    return get_host (l);
   }
   
   /* callback to retrieve a host for the given string label */
