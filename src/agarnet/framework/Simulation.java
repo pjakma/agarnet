@@ -15,12 +15,14 @@ import agarnet.link.link;
  * @param <H> The type used for Hosts in the Simulation
  */
 public abstract class Simulation<I,H> extends Observable {
+  /* Abstract class because Observable is a class, not an interface.
+   * TODO: Perhaps switch to the new Flow interface.
+   */
   public final Graph<H,link<H>> network;
-  
   public Simulation (Graph<H,link<H>> g) {
     this.network = g;
   }
-	
+
   /**
    * @param The node to query the simulation about
    * @return The set of nodes which are connected to the given node.
@@ -54,5 +56,5 @@ public abstract class Simulation<I,H> extends Observable {
    * @param node the node Id to lookup
    * @return the Host object for the given Id
    */
-   abstract public H id2node (I node);
+  abstract public H id2node (I node);
 }
