@@ -32,8 +32,8 @@ import java.io.Serializable;
  *
  * @author paul
  *
- * @param <T>
- * @param <H>
+ * @param <I> The type of the distinct identifiers for nodes
+ * @param <H> The type of the host/node objects in the simulation
  */
 public abstract class AbstractSim<I extends Serializable, 
                                   H extends PositionableHost<I,H>>
@@ -78,6 +78,9 @@ public abstract class AbstractSim<I extends Serializable,
     return idmap.getNode (l);
   }
   
+  /* Use a partition-graph to assign nodes to distinct sets, for parallel
+   * running of the simulation over threads.
+   */
   static private class order_partition<N,E> implements PartitionCallbacks<N,E> {
     private int count = 0;
     private int num = Math.max (Runtime.getRuntime ().availableProcessors () - 2, 1);
@@ -209,7 +212,9 @@ public abstract class AbstractSim<I extends Serializable,
      * "setup the graph and describe it, but don't run the
      * "protocol"
      */
-    for (int i = 0; (i == 0 && get_runs () == 0) || i <= get_runs (); i++) {
+    for (int i = (get_runs () == 0) ? 0 : 1;
+         (i == 0 && get_runs () == 0) || i <= get_runs ();
+         i++) {
       System.out.println ("\n# starting run " + i + " / " + get_runs ());
       
       network.plugObservable ();
