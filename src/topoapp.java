@@ -91,7 +91,9 @@ public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {
     
     if ((c = ConfigurableOption.getopts ("topoapp", args, confvars)) != 0)
           usage ("Unknown argument: " + (char) c);
-    
+
+    if (conf_help.get ())
+      usage (null, 0);
     dump_arg_state ();
     
     topoapp s = new topoapp (conf_model_size.get ());

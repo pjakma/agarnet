@@ -251,7 +251,9 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
           break;
       }
     }
-    
+
+    if (conf_help.get ())
+      usage (null, 0);  
     dump_arg_state ();
     
     simapp s = new simapp (conf_model_size.get ());

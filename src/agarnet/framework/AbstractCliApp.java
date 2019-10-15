@@ -255,6 +255,10 @@ public abstract class AbstractCliApp<I extends Serializable,
       }});
 
   /* booleans */
+  protected static final BooleanConfigOption conf_help
+    = new BooleanConfigOption (
+        "help", 'h',
+        "Show help").set (false);
   protected static final BooleanConfigOption conf_gui
     = new BooleanConfigOption (
         "gui", 'g',
@@ -285,13 +289,17 @@ public abstract class AbstractCliApp<I extends Serializable,
     = new ArrayList<> (Arrays.asList (
     /* ints */  conf_period, conf_runs, conf_sleep,
     /* bools */ conf_debug, conf_gui, conf_random_tick, conf_degrees,
-                conf_path_stats, conf_kshell_stats,
+                conf_path_stats, conf_kshell_stats, conf_help,
     conf_model_size,
     conf_topology,
     conf_layout,
     conf_link));
   
   protected static void usage (String s) {
+    usage (s, 1);
+  }
+  
+  protected static void usage (String s, int exitcode) {
     if (s != null)
       System.out.println ("Error: " + s);
     
@@ -367,7 +375,7 @@ public abstract class AbstractCliApp<I extends Serializable,
     sb.append ("\n");
     
     System.out.println (sb);
-    System.exit (1);
+    System.exit (exitcode);
   }
 
   protected static void dump_arg_state () {
