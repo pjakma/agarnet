@@ -10,7 +10,13 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
+import java.awt.geom.Point2D.Double;
 import java.awt.RenderingHints;
+import java.awt.font.FontRenderContext;
+import java.awt.font.TextLayout;
+import java.awt.geom.Rectangle2D;
+import java.awt.FontMetrics;
+
 import java.util.Observable;
 import java.util.Observer;
 import java.io.Serializable;
@@ -273,13 +279,23 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
                         (int)pos.getY () + (int)noderadius/4);
         
         if (show_tip) {
-          g.fillRect ((int)(pos.getX () - noderadius),
-                      (int)(pos.getY () + noderadius), 
-                      (int) noderadius * 2, (int)noderadius * 2);
+          String text = p.getId ().toString ();
+          FontMetrics fm = g.getFontMetrics();
+          Rectangle2D rect = fm.getStringBounds(text, g);
+          
+          Point2D rpos = new Point2D.Double (
+            pos.getX () - (rect.getWidth() / 2),
+            pos.getY () + (noderadius * 1.05)
+          );          
+          g.setColor(Color.gray);
+          g.fillRect ((int)rpos.getX (),
+                      (int)rpos.getY (),
+                      (int)rect.getWidth (), (int) rect.getHeight ());
+          
           g.setColor (Color.red);
-          g.drawString (p.getId ().toString (),
-                        (int)(pos.getX () - (noderadius * 0.75)),
-                        (int)(pos.getY () + (noderadius * 2)));
+          g.drawString (text,
+                        (int)rpos.getX (),
+                        (int)(rpos.getY () + fm.getAscent()));
         }
         
       }
