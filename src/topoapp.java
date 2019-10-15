@@ -25,7 +25,7 @@ import agarnet.variables.*;
  * @author paul
  *
  */
-public class topoapp extends AbstractCliApp<simhost> implements Observer {    
+public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {    
   @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_peer () {
     return new protocol [] {
@@ -37,7 +37,10 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
   
   private simhost get_host (Long id, simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
-    simhost s = new simhost (this, type, movable, protos.clone ());
+    simhost s;
+    if ((s = id2node (id)) != null)
+      return s;
+    s = new simhost (this, type, movable, protos.clone ());
     s.setId (id);
     new_node (id, s);
     return s;
@@ -45,6 +48,18 @@ public class topoapp extends AbstractCliApp<simhost> implements Observer {
   /* default get_host */
   protected simhost get_host (Long id) {
     return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
+  }
+  
+  @Override
+  public simhost str2node (String sl) {
+    long l;
+    try {
+      l = Long.parseLong (sl);
+    } catch (NumberFormatException e) {
+      debug.println (debug.levels.WARNING, "Invalid host identifier: " + sl);
+      return null;
+    }
+    return get_host (l);
   }
   
   public topoapp (Dimension d) {

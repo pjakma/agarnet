@@ -30,7 +30,7 @@ import agarnet.variables.*;
 import agarnet.variables.atoms.*;
 
 
-public class simapp extends AbstractCliApp<simhost> implements Observer {  
+public class simapp extends AbstractCliApp<Long, simhost> implements Observer {  
   private RandomMove<simhost,link<simhost>> moverewire = null;
   
   /* Java's handling of generic arrays seems less than useful. Rather than
@@ -72,7 +72,10 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
   
   private simhost get_host (Long id, simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
-    simhost s = new simhost (this, type, movable, protos.clone ());
+    simhost s;
+    if ((s = id2node (id)) != null)
+      return s;
+    s = new simhost (this, type, movable, protos.clone ());
     s.setId (id);
     new_node (id, s);
     return s;
@@ -80,6 +83,19 @@ public class simapp extends AbstractCliApp<simhost> implements Observer {
   @Override
   protected simhost get_host (Long id) {
     return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
+  }
+  
+  @Override
+  public simhost str2node (String name) {
+    long l;
+    
+    try {
+      l = Long.parseLong (name);
+    } catch (NumberFormatException e) {
+      debug.println (debug.levels.WARNING, "Invalid host identifier: " + name);
+      return null;
+    }
+    return get_host (l);
   }
   
   public simapp (Dimension d) {

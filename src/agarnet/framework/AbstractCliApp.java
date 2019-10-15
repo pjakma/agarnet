@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,11 +43,12 @@ import java.util.InputMismatchException;
  *
  * @param <H> The simulation host type.
  */
-public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_node>
-                extends AbstractSim<Long, H> {
+public abstract class AbstractCliApp<I extends Serializable,
+                                     H extends AnimatableHost<I,H> & kshell_node>
+                extends AbstractSim<I, H> {
   /* Force layout can be re-used while the sim runs */
   protected Random r = new Random ();
-  protected anipanel<Long, H> ap;
+  protected anipanel<I, H> ap;
 
   private int gen_rand_in_range_inc (String desc, int max, int min) {
     if (min < 0 || max - min < 0)
@@ -412,29 +414,14 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
     return _default_edge_labeler;
   }
   
-  public H id2node (String sl) {
-    long l;
-    H n;
-    
-    try {
-      l = Long.parseLong (sl);
-    } catch (NumberFormatException e) {
-      debug.println (debug.levels.WARNING, "Invalid host identifier: " + sl);
-      return null;
-    }
-    
-    if ((n = id2node (l)) != null)
-      return n;
-
-    return get_host (l);
-  }
+  public abstract H str2node (String sl);
   
   /* callback to retrieve a host for the given string label */
   private NodeLabeler<H, link<H>> _node_labeller = 
     new NodeLabeler<H, link<H>> () {
       @Override
       public H getNode (String node) {
-        return id2node (node);
+        return str2node (node);
       }
   };
   protected NodeLabeler<H, link<H>> default_node_labeler () {
@@ -462,7 +449,7 @@ public abstract class AbstractCliApp<H extends AnimatableHost<Long,H> & kshell_n
 
     @Override
     public H getNode (String node) {
-      return id2node (node);
+      return str2node (node);
     }
   }
 
