@@ -272,6 +272,9 @@ public class adjacency_list_reader<N,E> {
     
     debug.printf ("Parsing line: %s\n", line);
     
+    if (line.length() > 0 && (line.charAt (0) == '#'))
+      return;
+    
     if (use_ap == null) {
       for (acceptpattern ap : acceptpatterns) {
         //debug.printf ("Try %s: %s\n", ap.name, ap.re.pattern ());
