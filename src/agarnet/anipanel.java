@@ -17,6 +17,7 @@ import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.awt.FontMetrics;
 
+import java.util.LinkedList;
 import java.util.Observable;
 import java.util.Observer;
 import java.io.Serializable;
@@ -242,6 +243,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         }
       }
       
+      LinkedList<H> nodes_showtip = new LinkedList<> ();      
       for (H p : s.network) {
         boolean show_tip = false;
         
@@ -277,27 +279,33 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           g.drawString (Integer.toString ((int)p.getSize ()),
                         (int)pos.getX () - (int)noderadius/2,
                         (int)pos.getY () + (int)noderadius/4);
+
         
         if (show_tip) {
-          String text = p.getId ().toString ();
-          FontMetrics fm = g.getFontMetrics();
-          Rectangle2D rect = fm.getStringBounds(text, g);
-          
-          Point2D rpos = new Point2D.Double (
-            pos.getX () - (rect.getWidth() / 2),
-            pos.getY () + (noderadius * 1.05)
-          );          
-          g.setColor(Color.gray);
-          g.fillRect ((int)rpos.getX (),
-                      (int)rpos.getY (),
-                      (int)rect.getWidth (), (int) rect.getHeight ());
-          
-          g.setColor (Color.red);
-          g.drawString (text,
-                        (int)rpos.getX (),
-                        (int)(rpos.getY () + fm.getAscent()));
+          /* defer drawing of tips to end, to ensure tip box is on top. */
+          nodes_showtip.add (p);
         }
+      }
+      
+      for (H p : nodes_showtip) {
+        String text = p.getId ().toString ();
+        FontMetrics fm = g.getFontMetrics();
+        Rectangle2D rect = fm.getStringBounds(text, g);
+        Point2D pos = p.getPosition ();
         
+        Point2D rpos = new Point2D.Double (
+          pos.getX () - (rect.getWidth() / 2),
+          pos.getY () + (noderadius * 1.05)
+        );          
+        g.setColor(Color.gray);
+        g.fillRect ((int)rpos.getX (),
+                    (int)rpos.getY (),
+                    (int)rect.getWidth (), (int) rect.getHeight ());
+        
+        g.setColor (Color.red);
+        g.drawString (text,
+                      (int)rpos.getX (),
+                      (int)(rpos.getY () + fm.getAscent()));
       }
     } catch (NoninvertibleTransformException e) {
       e.printStackTrace();
