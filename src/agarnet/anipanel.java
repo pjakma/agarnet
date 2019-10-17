@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import java.util.Observable;
 import java.util.Observer;
 import java.io.Serializable;
+import java.awt.event.ComponentEvent;
 
 import javax.swing.JPanel;
 
@@ -43,20 +44,25 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   static final Color line_used = new Color (230,140,0);
   private boolean mouse_in_panel = false;
   private boolean textlabels = true;
-  private int mouse_x;
-  private int mouse_y;
+  private Point mouse_p = new Point();
   private Point mouse_pressed_p;
   private H host_dragging;
+  protected AffineTransform model_transform;
+  protected double noderadius;
   
   public anipanel (Simulation2D<I,H> s) {
     this.s = s;
     
     s.addObserver (this);
     
+    model_transform = create_model_transform ();
+    noderadius = noderadius ();
+    
     //this.setSize (1000, 600);
     this.setBackground (new Color (0,0,0));
     
     this.addMouseListener (new java.awt.event.MouseAdapter () {
+      
       @Override
       public void mouseExited (MouseEvent e) {
         mouse_in_panel = false;
@@ -70,7 +76,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       @Override
       public void mousePressed (MouseEvent e) {
         super.mousePressed (e);
-        mouse_pressed_p = e.getPoint ();
+        mouse_pressed_p = new Point ();
+        mouse_to_model (e, mouse_pressed_p);
       }
 
       @Override
@@ -84,20 +91,38 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     this.addMouseMotionListener (new java.awt.event.MouseMotionAdapter () {
       public void mouseMoved (MouseEvent e) {
         super.mouseMoved (e);
-        mouse_x = e.getX ();
-        mouse_y = e.getY ();
+        mouse_to_model (e, mouse_p);
         anipanel.this.repaint ();
       }
 
       @Override
       public void mouseDragged (MouseEvent e) {
         super.mouseDragged (e);
-        mouse_x = e.getX ();
-        mouse_y = e.getY ();
+        mouse_to_model (e, mouse_p);
         anipanel.this.repaint ();
       }
       
     });
+    
+    this.addComponentListener(new java.awt.event.ComponentAdapter () {
+      @Override
+      public void componentResized (ComponentEvent e) {
+        model_transform = create_model_transform ();
+        noderadius = noderadius ();
+      }
+    });
+  }
+  
+  private void mouse_to_model (MouseEvent ev, Point m) {
+    /* Mouse co-ordinates were reported with the default transform,
+     * in the abstract/scaled Java Graphics pixel space
+     */
+    try {
+      model_transform.inverseTransform (ev.getPoint (), m);
+    } catch (NoninvertibleTransformException e) {
+      e.printStackTrace();
+      System.exit (1);
+    }
   }
   
   public double noderadius () {
@@ -173,17 +198,59 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     
     return t;
   }
+
+  protected void drawNode (Graphics2D g, H p, LinkedList<H> nodes_showtip) {
+    boolean show_tip = false;
+    
+    g.setColor (p.colour ());
+    
+    Point2D pos = p.getPosition ();
+    
+    if (mouse_in_panel) {
+      if (mouse_p.x > pos.getX () - noderadius &&
+          mouse_p.x < pos.getX () + noderadius &&
+          mouse_p.y > pos.getY () - noderadius &&
+          mouse_p.y < pos.getY () + noderadius) {
+        show_tip = true;
+        
+        if (mouse_pressed_p != null) {
+          mouse_pressed_p = null;
+          host_dragging = p;
+        }
+      }
+      if (host_dragging != null) {
+        host_dragging.setPosition (new Vector2D (mouse_p));
+        pos = p.getPosition ();
+      }
+    }
+    
+    g.fillOval ((int)(pos.getX () - noderadius),
+                (int)(pos.getY () - noderadius),
+                (int)noderadius * 2, (int)noderadius * 2); 
+    
+    g.setColor (Color.gray);
+    
+    if (textlabels)
+      g.drawString (Integer.toString ((int)p.getSize ()),
+                    (int)pos.getX () - (int)noderadius/2,
+                    (int)pos.getY () + (int)noderadius/4);
+
+    
+    if (show_tip) {
+      /* defer drawing of tips to end, to ensure tip box is on top. */
+      nodes_showtip.add (p);
+    }
+  }
   
   protected void paintComponent (Graphics g1) {
     Graphics2D g = (Graphics2D) g1;
-    double noderadius = noderadius ();
+    LinkedList<H> nodes_showtip = new LinkedList<> ();      
     
     super.paintComponent (g);
     
     /* Looks good, but is fantastically slow for some reason */
     g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_ON);
-    AffineTransform model_transform = create_model_transform ();
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
     
@@ -191,6 +258,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
     
     try {
+      /* draw the edges */
       for (H p : s.network) {
         Point2D pos = p.getPosition ();
         
@@ -226,67 +294,14 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         }
       }
       
-      Point2D.Double mousep = null;
-      Point2D.Double mouse_press_model = null;
-      
-      if (mouse_in_panel) {
-        mousep = new Point2D.Double ();
-        /* Mouse co-ordinates were reported with the default transform,
-         * in the abstract/scaled Java Graphics pixel space
-         */
-        AffineTransform t = model_transform;
-        t.inverseTransform (new Point2D.Double (mouse_x, mouse_y), mousep);
-        
-        if (mouse_pressed_p != null) {
-          mouse_press_model = new Point2D.Double ();
-          t.inverseTransform (mouse_pressed_p, mouse_press_model);
-        }
-      }
-      
-      LinkedList<H> nodes_showtip = new LinkedList<> ();      
+      /* draw the nodes, in a second pass so they don't get edges drawn over,
+       * and so all nodes (inc. disconnected) are drawn
+       */
       for (H p : s.network) {
-        boolean show_tip = false;
-        
-        g.setColor (p.colour ());
-        
-        Point2D pos = p.getPosition ();
-        
-        if (mouse_in_panel) {
-          if (mousep.x > pos.getX () - noderadius &&
-              mousep.x < pos.getX () + noderadius &&
-              mousep.y > pos.getY () - noderadius &&
-              mousep.y < pos.getY () + noderadius) {
-            show_tip = true;
-            
-            if (mouse_press_model != null) {
-              mouse_pressed_p = null;
-              host_dragging = p;
-            }
-          }
-          if (host_dragging != null) {
-            host_dragging.setPosition (new Vector2D (mousep));
-            pos = p.getPosition ();
-          }
-        }
-        
-        g.fillOval ((int)(pos.getX () - noderadius),
-                    (int)(pos.getY () - noderadius),
-                    (int)noderadius * 2, (int)noderadius * 2); 
-        
-        g.setColor (Color.gray);
-        
-        if (textlabels)
-          g.drawString (Integer.toString ((int)p.getSize ()),
-                        (int)pos.getX () - (int)noderadius/2,
-                        (int)pos.getY () + (int)noderadius/4);
-
-        
-        if (show_tip) {
-          /* defer drawing of tips to end, to ensure tip box is on top. */
-          nodes_showtip.add (p);
-        }
+        drawNode (g, p, nodes_showtip);
       }
       
+      /* tool tip popup */
       for (H p : nodes_showtip) {
         String text = p.getId ().toString ();
         FontMetrics fm = g.getFontMetrics();
@@ -307,9 +322,6 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
                       (int)rpos.getX (),
                       (int)(rpos.getY () + fm.getAscent()));
       }
-    } catch (NoninvertibleTransformException e) {
-      e.printStackTrace();
-      System.exit (1);
     } finally {
       g.setTransform (save);
     }
