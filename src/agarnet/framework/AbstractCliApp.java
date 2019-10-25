@@ -174,6 +174,8 @@ public abstract class AbstractCliApp<I extends Serializable,
              new FloatVar (
                "C", "scalar applied to the k constant of the algorithm"),
              new FloatVar (
+               "massexp", "Mass exponent, to modulate repulsive force by node mass"),
+             new FloatVar (
                "decay", "decay constant to apply to energy"),
              new FloatVar (
                "mintemp","Minimum temperature algorithm can decay to",
@@ -558,6 +560,8 @@ public abstract class AbstractCliApp<I extends Serializable,
           
           if (bkey.equals ("C"))
             fl.setC (fval.get ());
+          if (bkey.equals ("massexp"))
+            fl.setMassExponent (fval.get ());
           if (bkey.equals ("mintemp"))
             fl.setMintemp (fval.get ());
           if (bkey.equals ("minkve"))
