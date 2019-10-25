@@ -113,6 +113,11 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     });
   }
   
+  public anipanel (Simulation2D<I,H> s, boolean textlabels) {
+    this (s);
+    this.textlabels = textlabels;
+  }
+  
   private void mouse_to_model (MouseEvent ev, Point m) {
     /* Mouse co-ordinates were reported with the default transform,
      * in the abstract/scaled Java Graphics pixel space
@@ -254,8 +259,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
     
-    if (textlabels)
-      g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
+    g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
     
     try {
       /* draw the edges */
