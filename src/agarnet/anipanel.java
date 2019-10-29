@@ -43,15 +43,31 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
   private boolean mouse_in_panel = false;
-  private boolean textlabels = true;
+  private options opts = new options().textlabels (true)
+                                      .always_show_tips (false);;
   private Point mouse_p = new Point();
   private Point mouse_pressed_p;
   private H host_dragging;
   protected AffineTransform model_transform;
   protected double noderadius;
   
+  public static class options {
+    public boolean always_show_tips = false;
+    public boolean textlabels = true;
+    
+    public options always_show_tips (boolean v) {
+      always_show_tips = v;
+      return this;
+    }
+    public options textlabels (boolean v) {
+      textlabels = v;
+      return this;
+    }
+  }
+  
   public anipanel (Simulation2D<I,H> s) {
     this.s = s;
+    
     
     s.addObserver (this);
     
@@ -113,9 +129,9 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     });
   }
   
-  public anipanel (Simulation2D<I,H> s, boolean textlabels) {
+  public anipanel (Simulation2D<I,H> s, anipanel.options opts) {
     this (s);
-    this.textlabels = textlabels;
+    this.opts = opts;
   }
   
   private void mouse_to_model (MouseEvent ev, Point m) {
@@ -235,13 +251,13 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     
     g.setColor (Color.gray);
     
-    if (textlabels)
+    if (opts.textlabels)
       g.drawString (Integer.toString ((int)p.getSize ()),
                     (int)pos.getX () - (int)noderadius/2,
                     (int)pos.getY () + (int)noderadius/4);
 
     
-    if (show_tip) {
+    if (opts.always_show_tips || show_tip) {
       /* defer drawing of tips to end, to ensure tip box is on top. */
       nodes_showtip.add (p);
     }
@@ -288,7 +304,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           
           g.drawLine ((int) pos.getX (), (int) pos.getY (),
                       (int) pos2.getX (),(int) pos2.getY ());
-          if (textlabels) {
+          if (opts.textlabels) {
             g.drawString ("bw: " + edge.label ().get (p).bandwidth,
                           (int) vec.x, (int) vec.y - (int) noderadius/2);
             g.drawString ("lat: " + edge.label ().get (p).latency,
