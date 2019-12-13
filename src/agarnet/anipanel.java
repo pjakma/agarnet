@@ -59,6 +59,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   Simulation2D<I,H> s;
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
+  static final Color line_highlight = new Color (240,143, 143);
   private boolean mouse_in_panel = false;
   private options opts = new options().textlabels (true)
                                       .always_show_tips (false);;
@@ -236,12 +237,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     
     return t;
   }
-
-  protected void drawNode (Graphics2D g, H p, LinkedList<H> nodes_showtip) {
-    boolean show_tip = false;
-    
-    g.setColor (p.colour ());
-    
+  
+  protected boolean is_mouse_over (H p) {
     Point2D pos = p.getPosition ();
     
     if (mouse_in_panel) {
@@ -249,17 +246,51 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           mouse_p.x < pos.getX () + noderadius &&
           mouse_p.y > pos.getY () - noderadius &&
           mouse_p.y < pos.getY () + noderadius) {
-        show_tip = true;
-        
-        if (mouse_pressed_p != null) {
-          mouse_pressed_p = null;
-          host_dragging = p;
-        }
+        return true;
       }
-      if (host_dragging != null) {
-        host_dragging.setPosition (new Vector2D (mouse_p));
-        pos = p.getPosition ();
+    }
+    return false;
+  }
+
+  protected void drawEdge (Graphics2D g, Edge<H, link<H>> edge, 
+                           H p1, Point2D pos1, Point2D pos2,
+                           Color line_color) {
+    Vector2D vec = new Vector2D (pos2);
+
+    vec.minus (pos1);
+    vec.times (0.5);
+    vec.plus (pos1);
+    
+    g.setColor (line_color);
+    
+    g.drawLine ((int) pos1.getX (), (int) pos1.getY (),
+                (int) pos2.getX (), (int) pos2.getY ());
+    if (opts.textlabels) {
+      g.drawString ("bw: " + edge.label ().get (p1).bandwidth,
+                    (int) vec.x, (int) vec.y - (int) noderadius/2);
+      g.drawString ("lat: " + edge.label ().get (p1).latency,
+                    (int) vec.x, (int) vec.y + (int) noderadius/2);
+    }
+  }
+  
+  protected void drawNode (Graphics2D g, H p) {
+    boolean mouse_over = false;
+    
+    g.setColor (p.colour ());
+    
+    Point2D pos = p.getPosition ();
+    
+    if (is_mouse_over (p)) {
+      mouse_over = true;
+      
+      if (mouse_pressed_p != null) {
+        mouse_pressed_p = null;
+        host_dragging = p;
       }
+    }
+    if (host_dragging != null) {
+      host_dragging.setPosition (new Vector2D (mouse_p));
+      pos = p.getPosition ();
     }
     
     g.fillOval ((int)(pos.getX () - noderadius),
@@ -274,21 +305,18 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
                     (int)pos.getY () + (int)noderadius/4);
 
     
-    if (opts.always_show_tips || show_tip) {
-      /* defer drawing of tips to end, to ensure tip box is on top. */
-      nodes_showtip.add (p);
-    }
   }
   
   protected void paintComponent (Graphics g1) {
     Graphics2D g = (Graphics2D) g1;
     LinkedList<H> nodes_showtip = new LinkedList<> ();      
+    LinkedList<Edge<H,link<H>>> edges_defer = new LinkedList<> ();
     
     super.paintComponent (g);
     
     /* Looks good, but is fantastically slow for some reason */
-    g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
-                        RenderingHints.VALUE_ANTIALIAS_ON);
+    /*g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
+                          RenderingHints.VALUE_ANTIALIAS_ON);*/
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
     
@@ -306,36 +334,42 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           if (edge.from () != p)
             continue;
           
-          Point2D pos2 = edge.to ().getPosition ();
-          Vector2D vec = new Vector2D (pos2);
+          
+          H p2 = edge.to ();
+          Point2D pos2 = p2.getPosition ();
 
-          vec.minus (pos);
-          vec.times (0.5);
-          vec.plus (pos);
+          Color line_colour = line;
           
-          g.setColor (line);
-          if (edge.label ().size () > 0)
-            g.setColor (line_used);
-          else
-            g.setColor (line);
+          if (is_mouse_over (p) || is_mouse_over (p2))
+            edges_defer.add (edge);
+          else {
+            if (edge.label ().size () > 0)
+              line_colour = line_used;
           
-          g.drawLine ((int) pos.getX (), (int) pos.getY (),
-                      (int) pos2.getX (),(int) pos2.getY ());
-          if (opts.textlabels) {
-            g.drawString ("bw: " + edge.label ().get (p).bandwidth,
-                          (int) vec.x, (int) vec.y - (int) noderadius/2);
-            g.drawString ("lat: " + edge.label ().get (p).latency,
-                          (int) vec.x, (int) vec.y + (int) noderadius/2);
+            drawEdge (g, edge, p, pos, pos2, line_colour);
           }
-          
         }
+
+      }
+      
+      /* The deferred edges. Should just be one, so a better algorithmic
+       * solution but with higher constant load is not necessary 
+       */
+      for (Edge<H, link<H>> edge : edges_defer) {
+        H p = edge.from ();
+        Point2D pos = p.getPosition ();
+        drawEdge (g, edge, p, pos, edge.to ().getPosition (), line_highlight);
       }
       
       /* draw the nodes, in a second pass so they don't get edges drawn over,
        * and so all nodes (inc. disconnected) are drawn
        */
       for (H p : s.network) {
-        drawNode (g, p, nodes_showtip);
+        if (opts.always_show_tips || is_mouse_over (p)) {
+          /* defer drawing of tips to end, to ensure tip box is on top. */
+          nodes_showtip.add (p);
+        }
+        drawNode (g, p);
       }
       
       /* tool tip popup */
