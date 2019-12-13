@@ -306,11 +306,31 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
 
     
   }
+
+  protected void draw_node_tip (Graphics2D g, H p) {
+    FontMetrics fm = g.getFontMetrics();
+    String text = p.getId ().toString ();
+    Rectangle2D rect = fm.getStringBounds(text, g);
+    Point2D pos = p.getPosition ();
+    
+    Point2D rpos = new Point2D.Double (
+      pos.getX () - (rect.getWidth() / 2),
+      pos.getY () + (noderadius * 1.05)
+    );          
+    g.setColor(Color.gray);
+    g.fillRect ((int)rpos.getX (),
+                (int)rpos.getY (),
+                (int)rect.getWidth (), (int) rect.getHeight ());
+    
+    g.setColor (Color.red);
+    g.drawString (text,
+                  (int)rpos.getX (),
+                  (int)(rpos.getY () + fm.getAscent()));
+  }
   
   protected void paintComponent (Graphics g1) {
     Graphics2D g = (Graphics2D) g1;
-    LinkedList<H> nodes_showtip = new LinkedList<> ();      
-    LinkedList<Edge<H,link<H>>> edges_defer = new LinkedList<> ();
+    LinkedList<H> nodes_mouseover = new LinkedList<> ();
     
     super.paintComponent (g);
     
@@ -327,6 +347,14 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       for (H p : s.network) {
         Point2D pos = p.getPosition ();
         
+        /* nodes under the mouse have drawing deferred to end
+         * if there were a lot, could sort, but there shouldn't be. 
+         */
+        if (is_mouse_over (p)) {
+          nodes_mouseover.add (p);
+          continue;
+        }
+        
         for (Edge<H, link<H>> edge : s.network.edges (p)) {
           /* we only want to process an edge once, luckily edges in an
            * undirected graph still have a polarity we can filter on
@@ -334,64 +362,46 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           if (edge.from () != p)
             continue;
           
-          
           H p2 = edge.to ();
           Point2D pos2 = p2.getPosition ();
 
           Color line_colour = line;
           
-          if (is_mouse_over (p) || is_mouse_over (p2))
-            edges_defer.add (edge);
-          else {
-            if (edge.label ().size () > 0)
-              line_colour = line_used;
+          if (edge.label ().size () > 0)
+            line_colour = line_used;
           
-            drawEdge (g, edge, p, pos, pos2, line_colour);
-          }
+          drawEdge (g, edge, p, pos, pos2, line_colour);
         }
 
       }
       
-      /* The deferred edges. Should just be one, so a better algorithmic
-       * solution but with higher constant load is not necessary 
-       */
-      for (Edge<H, link<H>> edge : edges_defer) {
-        H p = edge.from ();
-        Point2D pos = p.getPosition ();
-        drawEdge (g, edge, p, pos, edge.to ().getPosition (), line_highlight);
+      /* Now draw the edges of mouse-over nodes, so they're on top */
+      for (H p : nodes_mouseover) {
+        for (Edge<H, link<H>> edge : s.network.edges (p)) {
+          if (edge.from () != p)
+            continue;
+          Point2D pos = p.getPosition ();
+          drawEdge (g, edge, p, pos, edge.to().getPosition (), line_highlight);
+        }
       }
       
       /* draw the nodes, in a second pass so they don't get edges drawn over,
        * and so all nodes (inc. disconnected) are drawn
        */
       for (H p : s.network) {
-        if (opts.always_show_tips || is_mouse_over (p)) {
-          /* defer drawing of tips to end, to ensure tip box is on top. */
-          nodes_showtip.add (p);
-        }
         drawNode (g, p);
       }
       
-      /* tool tip popup */
-      for (H p : nodes_showtip) {
-        String text = p.getId ().toString ();
-        FontMetrics fm = g.getFontMetrics();
-        Rectangle2D rect = fm.getStringBounds(text, g);
-        Point2D pos = p.getPosition ();
-        
-        Point2D rpos = new Point2D.Double (
-          pos.getX () - (rect.getWidth() / 2),
-          pos.getY () + (noderadius * 1.05)
-        );          
-        g.setColor(Color.gray);
-        g.fillRect ((int)rpos.getX (),
-                    (int)rpos.getY (),
-                    (int)rect.getWidth (), (int) rect.getHeight ());
-        
-        g.setColor (Color.red);
-        g.drawString (text,
-                      (int)rpos.getX (),
-                      (int)(rpos.getY () + fm.getAscent()));
+      /* Another pass if tool tip popups should always be shown */
+      if (opts.always_show_tips) {
+        for (H p : s.network)
+          if (!is_mouse_over (p))
+            draw_node_tip (g, p);
+      }
+      
+      /* draw tip for mouse-over nodes on top */
+      for (H p : nodes_mouseover) {
+        draw_node_tip (g, p);
       }
     } finally {
       g.setTransform (save);
