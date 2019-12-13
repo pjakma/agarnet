@@ -72,6 +72,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   public static class options {
     public boolean always_show_tips = false;
     public boolean textlabels = true;
+    /* Looks good, but is fantastically slow on OpenJDK for some reason */
+    public boolean antialiasing = false;
     
     public options always_show_tips (boolean v) {
       always_show_tips = v;
@@ -81,6 +83,10 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       textlabels = v;
       return this;
     }
+    public options antialiasing (boolean v) {
+      antialiasing = v;
+      return this;
+    }    
   }
   
   public anipanel (Simulation2D<I,H> s) {
@@ -334,9 +340,10 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     
     super.paintComponent (g);
     
-    /* Looks good, but is fantastically slow for some reason */
-    /*g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
-                          RenderingHints.VALUE_ANTIALIAS_ON);*/
+    if (opts.antialiasing) {
+      g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
+                          RenderingHints.VALUE_ANTIALIAS_ON);
+    }
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
     
