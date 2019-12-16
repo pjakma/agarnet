@@ -179,78 +179,13 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
   
   public static void main(String args[]) {    
     int c;
-    LinkedList<LongOpt> lopts = new LinkedList<LongOpt> ();
     
     /* Add P2P sim specific config-vars */
     confvars.addAll (new ArrayList<ConfigurableOption> (Arrays.asList (
                             conf_peers, conf_leeches, conf_perturb)));
     
-    for (ConfigurableOption cv : confvars)
-      lopts.add (cv.lopt);
-    
-    debug.println ("str: " + ConfigurableOption.get_optstring (confvars));
-    Getopt g = new Getopt("simapp", args,
-                          ConfigurableOption.get_optstring (confvars),
-                          lopts.toArray (new LongOpt [0]));
-    
-    while ((c = g.getopt ()) != -1) {
-      switch (c) {
-        case '?':
-          usage ("Unknown argument: " + (char)g.getOptopt ());
-          break;
-        case 'p':
-          conf_peers.parse (g.getOptarg ());
-          break;
-        case 'P':
-          conf_period.parse (g.getOptarg ());
-          break;
-        case 'L':
-          conf_leeches.parse (g.getOptarg ());
-          break;
-        case 'b':
-          conf_perturb.parse (g.getOptarg ());
-          break;
-        case 'd':
-          BooleanVar db
-          = ((BooleanVar)conf_debug.subopts.get ("debug"));
-        db.set (true);
-        conf_debug.parse (g.getOptarg ());
-          break;
-        case 'D':
-          conf_degrees.set (true);
-          break;
-        case 'g':
-          conf_gui.set (true);
-          break;
-        case 't':
-          conf_topology.parse (g.getOptarg ());
-          break;
-        case 'K':
-          conf_kshell_stats.set (true);
-          break;
-        case 'l':
-          conf_layout.parse (g.getOptarg ());
-          break;
-        case 'r':
-          conf_runs.parse (g.getOptarg ());
-          break;
-        case 'T':
-          conf_path_stats.set (true);
-          break;
-        case 'R':
-          conf_random_tick.set (true);
-          break;
-        case 's':
-          conf_sleep.parse (g.getOptarg ());
-          break;
-        case 'S':
-          conf_seeds.parse (g.getOptarg ());
-          break;
-        case 'M':
-          conf_model_size.parse (g.getOptarg ());
-          break;
-      }
-    }
+    if ((c = ConfigurableOption.getopts ("simapp", args, confvars)) != 0)
+      usage ("Unknown argument: " + (char) c);
 
     if (conf_help.get ())
       usage (null, 0);  
