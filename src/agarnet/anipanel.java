@@ -37,6 +37,8 @@ import java.awt.FontMetrics;
 import java.util.LinkedList;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
+import java.util.HashSet;
 import java.io.Serializable;
 import java.awt.event.ComponentEvent;
 
@@ -60,14 +62,11 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
   static final Color line_highlight = new Color (240,143, 143);
-  private boolean mouse_in_panel = false;
   private options opts = new options().textlabels (true)
                                       .always_show_tips (false);;
-  private Point mouse_p = new Point();
-  private Point mouse_pressed_p;
-  private H host_dragging;
   protected AffineTransform model_transform;
   protected double noderadius;
+  protected mouse_state mouse_state = new mouse_state ();
   
   public static class options {
     public boolean always_show_tips = false;
@@ -88,6 +87,136 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       return this;
     }    
   }
+
+  /* Don't have an index to map mouse (x,y) to nodes.
+   * And probably don't want one either.
+   *
+   * Instead the mouse-related state is simply recorded here in the event.
+   * Then the actions are driven by the paint loop, which iterates over
+   * the nodes and calls mouse-state.update for each nodes to apply
+   * the mouse-state to the node, as necessary.
+   */
+  protected class mouse_state implements java.awt.event.MouseListener, 
+                                         java.awt.event.MouseMotionListener {
+    private Point position = new Point ();
+    private boolean is_in_panel = false;
+    private boolean pressed = false;
+    private H node_pressed = null;
+    private boolean dragging = false;
+    private boolean clicked = false;
+    
+    Set<H> nodes_selected = new HashSet<H> ();
+    // Deliberately restricted to one, to minimise the cost
+    // of the "is this a node_over?" check in the update loop.
+    //
+    // Overlapping nodes, implementation details will determine which
+    // node can be selected. I'm fine with that. 
+    //
+    // TBD: Implement a GUI with an API with sprites/nodes where the
+    // API can directly determine which object a mouse event applies to.
+    // E.g., JavaFX?
+    private H node_over = null;
+    
+    @Override
+    public void mouseExited (MouseEvent ev) {
+      is_in_panel = false;
+      pressed = false;
+    }
+
+    @Override
+    public void mouseEntered (MouseEvent ev) {
+      is_in_panel = true;
+      mouse_to_model (ev, position);
+    }
+    
+    @Override
+    public void mouseClicked(MouseEvent ev) {
+      clicked = true;
+    }
+
+    @Override
+    public void mousePressed (MouseEvent ev) {
+      pressed = true;
+    }
+
+    @Override
+    public void mouseReleased (MouseEvent ev) {
+      pressed = false;
+      dragging = false;
+      node_pressed = null;
+    }
+    public void mouseMoved (MouseEvent ev) {
+      mouse_to_model (ev, position);
+      anipanel.this.repaint ();
+    }
+
+    @Override
+    public void mouseDragged (MouseEvent ev) {
+      dragging = true;
+      mouseMoved (ev);
+    }
+    
+    Point position () {
+      if (is_in_panel)
+        return position;
+      return null;
+    }
+    
+    protected boolean is_over (H p) {
+      Point2D pos = p.getPosition ();
+      
+      if (is_in_panel) {
+        if (position.x > pos.getX () - noderadius &&
+            position.x < pos.getX () + noderadius &&
+            position.y > pos.getY () - noderadius &&
+            position.y < pos.getY () + noderadius) {
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    /* Host specific update */
+    protected void update (H p) {
+      if (!is_over (p)) {
+        if (node_over == p)
+          node_over = null;
+        return;
+      }
+      node_over = p;
+    }
+    
+    /* Per animation loop general update */
+    protected void update () {
+      /* Event state transitions are:
+       * 
+       *   Pressed -> Released -> Clicked
+       * | Pressed -> dragging -> Released
+       *
+       */
+       
+      /* Transition into clicked | dragging, record the pressed node */
+      if (dragging || clicked) {
+        if (node_over != null && node_pressed == null) {
+          node_pressed = node_over;
+        }
+      }
+      
+      /* handle clicks */
+      if (clicked && node_pressed != null) {
+        /* Selection state change for the node */
+        if (!nodes_selected.remove (node_pressed))
+          nodes_selected.add (node_pressed);
+        node_pressed = null;
+        clicked = false;
+      }
+      
+      /* handle drags */
+      if (dragging && node_pressed != null) {
+        node_pressed.setPosition (new Vector2D (position));
+      }
+    }
+  }
   
   public anipanel (Simulation2D<I,H> s) {
     this.s = s;
@@ -102,48 +231,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     this.setBackground (new Color (0,0,0));
     this.setFocusable (true);
     
-    this.addMouseListener (new java.awt.event.MouseAdapter () {
-      
-      @Override
-      public void mouseExited (MouseEvent e) {
-        mouse_in_panel = false;
-      }
-
-      @Override
-      public void mouseEntered (MouseEvent e) {
-        mouse_in_panel = true;
-      }
-
-      @Override
-      public void mousePressed (MouseEvent e) {
-        super.mousePressed (e);
-        mouse_pressed_p = new Point ();
-        mouse_to_model (e, mouse_pressed_p);
-      }
-
-      @Override
-      public void mouseReleased (MouseEvent e) {
-        super.mouseReleased (e);
-        host_dragging = null;
-        mouse_pressed_p = null;
-      }
-    });
-    
-    this.addMouseMotionListener (new java.awt.event.MouseMotionAdapter () {
-      public void mouseMoved (MouseEvent e) {
-        super.mouseMoved (e);
-        mouse_to_model (e, mouse_p);
-        anipanel.this.repaint ();
-      }
-
-      @Override
-      public void mouseDragged (MouseEvent e) {
-        super.mouseDragged (e);
-        mouse_to_model (e, mouse_p);
-        anipanel.this.repaint ();
-      }
-      
-    });
+    this.addMouseListener (mouse_state);
+    this.addMouseMotionListener (mouse_state);
     
     this.addComponentListener(new java.awt.event.ComponentAdapter () {
       @Override
@@ -270,19 +359,6 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     return t;
   }
   
-  protected boolean is_mouse_over (H p) {
-    Point2D pos = p.getPosition ();
-    
-    if (mouse_in_panel) {
-      if (mouse_p.x > pos.getX () - noderadius &&
-          mouse_p.x < pos.getX () + noderadius &&
-          mouse_p.y > pos.getY () - noderadius &&
-          mouse_p.y < pos.getY () + noderadius) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   protected void drawEdge (Graphics2D g, Edge<H, link<H>> edge, 
                            H p1, Point2D pos1, Point2D pos2,
@@ -310,20 +386,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     
     g.setColor (p.colour ());
     
+    mouse_state.update (p);
     Point2D pos = p.getPosition ();
-    
-    if (is_mouse_over (p)) {
-      mouse_over = true;
-      
-      if (mouse_pressed_p != null) {
-        mouse_pressed_p = null;
-        host_dragging = p;
-      }
-    }
-    if (host_dragging != null) {
-      host_dragging.setPosition (new Vector2D (mouse_p));
-      pos = p.getPosition ();
-    }
     
     g.fillOval ((int)(pos.getX () - noderadius),
                 (int)(pos.getY () - noderadius),
@@ -376,14 +440,18 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
     
     try {
+      mouse_state.update ();
+      
       /* draw the edges */
       for (H p : s.network) {
         Point2D pos = p.getPosition ();
         
+        mouse_state.update (p);
+        
         /* nodes under the mouse have drawing deferred to end
          * if there were a lot, could sort, but there shouldn't be. 
          */
-        if (is_mouse_over (p)) {
+        if (mouse_state.is_over (p)) {
           nodes_mouseover.add (p);
           continue;
         }
@@ -428,13 +496,13 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       /* Another pass if tool tip popups should always be shown */
       if (opts.always_show_tips) {
         for (H p : s.network)
-          if (!is_mouse_over (p))
+          if (!mouse_state.is_over (p))
             draw_node_tip (g, p);
       }
       
       /* draw tip for mouse-over nodes on top */
       for (H p : nodes_mouseover) {
-        draw_node_tip (g, p);
+        draw_node_tip (g, p);      
       }
     } finally {
       g.setTransform (save);
