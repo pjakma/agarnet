@@ -117,7 +117,9 @@ public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {
         
     JFrame jf = null;
     if (conf_gui.get ()) {
-      s.ap = new anipanel<Long,simhost> (s);
+      anipanel.options opts
+        = new anipanel.options ().antialiasing (conf_antialias.get ());
+      s.ap = new anipanel<Long,simhost> (s, opts);
       jf = new JFrame ();
       jf.add (s.ap);
       jf.pack ();

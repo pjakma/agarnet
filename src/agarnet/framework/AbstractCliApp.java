@@ -302,13 +302,17 @@ public abstract class AbstractCliApp<I extends Serializable,
     = new BooleanConfigOption (
         "adj-matrix", 'a',
         "print adjacency-matrix").set (false);
-
+  protected static final BooleanConfigOption conf_antialias
+    = new BooleanConfigOption (
+        "anti-alias", 'A',
+        "Enable anti-aliased GUI rendering").set (false);
+  
   /* List of all the desired configuration options */
   protected static final List<ConfigurableOption> confvars
     = new ArrayList<> (Arrays.asList (
     /* ints */  conf_period, conf_runs, conf_sleep,
     /* bools */ conf_debug, conf_gui, conf_random_tick, conf_degrees,
-                conf_path_stats, conf_kshell_stats, conf_help,
+                conf_path_stats, conf_kshell_stats, conf_help, conf_antialias,
     conf_model_size,
     conf_topology,
     conf_layout,
