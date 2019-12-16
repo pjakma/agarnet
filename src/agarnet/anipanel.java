@@ -100,6 +100,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     
     //this.setSize (1000, 600);
     this.setBackground (new Color (0,0,0));
+    this.setFocusable (true);
     
     this.addMouseListener (new java.awt.event.MouseAdapter () {
       
@@ -149,6 +150,31 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       public void componentResized (ComponentEvent e) {
         model_transform = create_model_transform ();
         noderadius = noderadius ();
+      }
+    });
+    
+    this.addKeyListener(new java.awt.event.KeyListener () {
+      @Override
+      public void keyTyped(java.awt.event.KeyEvent e) {
+        System.out.println("key typed!" + e.getKeyChar ());
+        switch (e.getKeyChar ()) {
+          case 't':
+          case 'T':
+            opts.always_show_tips = !opts.always_show_tips;
+            break;
+          case 'a':
+          case 'A':
+            opts.antialiasing = !opts.antialiasing;
+            break;
+        }
+      }
+      @Override
+      public void keyPressed (java.awt.event.KeyEvent e) {
+        System.out.println("key pressed!" + e.getKeyChar ());
+      }
+      @Override
+      public void keyReleased (java.awt.event.KeyEvent e) {
+        System.out.println("key released!" + e.getKeyChar ());
       }
     });
   }
