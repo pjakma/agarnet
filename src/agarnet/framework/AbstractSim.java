@@ -29,6 +29,8 @@ import org.nongnu.multigraph.SimpleGraph;
 import org.nongnu.multigraph.debug;
 import org.nongnu.multigraph.PartitionGraph;
 import org.nongnu.multigraph.PartitionGraph.PartitionCallbacks;
+import org.nongnu.multigraph.metrics.dmap;
+import org.nongnu.multigraph.metrics.TraversalMetrics;
 
 import agarnet.link.link;
 import agarnet.link.unilink;
@@ -61,6 +63,7 @@ public abstract class AbstractSim<I extends Serializable,
   protected idmap<I,H> idmap = new sync_idmap<> ();
   protected sim_stats sim_stats = new sim_stats ();
   private PartitionGraph<H,link<H>> partition_graph;
+  private dmap<H> distance_map;
   
   protected class sim_stats {
     /* node Tx path is multi-threaded now */
@@ -69,7 +72,13 @@ public abstract class AbstractSim<I extends Serializable,
     private long ticks;
     public long get_ticks () { return ticks; }
   }
-
+  
+  protected dmap<H> distance_map () {
+    if (distance_map == null)
+      distance_map = TraversalMetrics.FloydWarshal (network);
+    return distance_map;
+  }
+  
   /**
    * Hook for concrete implementations, to allow Host object
    * to be retrieved, and possibly created, for any given Id.

@@ -897,7 +897,8 @@ public abstract class AbstractCliApp<I extends Serializable,
   
   /* path related statistics */
   private void describe_paths () {
-    Map<String,Double> stats = TraversalMetrics.stats (network);
+    Map<String,Double> stats 
+      = TraversalMetrics.stats (this.distance_map (), network);
     
     System.out.println ("Path max: " + stats.get ("max").intValue ());
     System.out.printf ("Path average: %.3f\n", stats.get ("avg"));
@@ -933,8 +934,9 @@ public abstract class AbstractCliApp<I extends Serializable,
                           + " " + (Runtime.getRuntime ().totalMemory () >> 20)
                           + " MiB");
     }
-    if (conf_path_stats.get ())
+    if (conf_path_stats.get ()) {
       describe_paths ();
+    }
     if (conf_kshell_stats.get ())
       describe_kshells ();
     
