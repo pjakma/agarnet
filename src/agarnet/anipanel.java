@@ -245,7 +245,6 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     this.addKeyListener(new java.awt.event.KeyListener () {
       @Override
       public void keyTyped(java.awt.event.KeyEvent e) {
-        System.out.println("key typed!" + e.getKeyChar ());
         switch (e.getKeyChar ()) {
           case 't':
           case 'T':
@@ -258,13 +257,9 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         }
       }
       @Override
-      public void keyPressed (java.awt.event.KeyEvent e) {
-        System.out.println("key pressed!" + e.getKeyChar ());
-      }
+      public void keyPressed (java.awt.event.KeyEvent e) {}
       @Override
-      public void keyReleased (java.awt.event.KeyEvent e) {
-        System.out.println("key released!" + e.getKeyChar ());
-      }
+      public void keyReleased (java.awt.event.KeyEvent e) {}
     });
   }
   
