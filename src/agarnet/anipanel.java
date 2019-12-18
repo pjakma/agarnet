@@ -34,11 +34,8 @@ import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.awt.FontMetrics;
 
-import java.util.LinkedList;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
+
 import java.io.Serializable;
 import java.awt.event.ComponentEvent;
 
@@ -46,6 +43,7 @@ import javax.swing.JPanel;
 
 import org.nongnu.multigraph.Edge;
 import org.nongnu.multigraph.layout.Vector2D;
+import org.nongnu.multigraph.ShortestPathFirst;
 
 import agarnet.framework.Simulation2D;
 import agarnet.link.link;
@@ -67,6 +65,9 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   protected AffineTransform model_transform;
   protected double noderadius;
   protected mouse_state mouse_state = new mouse_state ();
+  
+  /* Cache the SPF tree calculated for selected nodes. */
+  Map<H, ShortestPathFirst<H,link<H>>> spfcache = new HashMap<> ();
   
   public static class options {
     public boolean always_show_tips = false;
@@ -105,7 +106,11 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     private boolean dragging = false;
     private boolean clicked = false;
     
-    Set<H> nodes_selected = new HashSet<H> ();
+    /* Set ordered by insertion, so can determine the first node
+     * added
+     */
+    LinkedHashSet<H> nodes_selected = new LinkedHashSet<H> ();
+    
     // Deliberately restricted to one, to minimise the cost
     // of the "is this a node_over?" check in the update loop.
     //
@@ -205,8 +210,17 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       /* handle clicks */
       if (clicked && node_pressed != null) {
         /* Selection state change for the node */
-        if (!nodes_selected.remove (node_pressed))
+        if (!nodes_selected.remove (node_pressed)) {
           nodes_selected.add (node_pressed);
+          
+          ShortestPathFirst<H,link<H>> spf = spfcache.get (node_pressed);
+          
+          if (spf == null) {
+            spf = new ShortestPathFirst<H,link<H>> (anipanel.this.s.network);
+            spf.run (node_pressed);
+            spfcache.put (node_pressed, spf);
+          }
+        }
         node_pressed = null;
         clicked = false;
       }
@@ -220,8 +234,6 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   
   public anipanel (Simulation2D<I,H> s) {
     this.s = s;
-    
-    
     s.addObserver (this);
     
     model_transform = create_model_transform ();
@@ -254,6 +266,9 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           case 'A':
             opts.antialiasing = !opts.antialiasing;
             break;
+          case 'c':
+          case 'C':
+            mouse_state.nodes_selected.clear ();
         }
       }
       @Override
@@ -377,10 +392,11 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   }
   
   protected void drawNode (Graphics2D g, H p) {
-    boolean mouse_over = false;
-    
-    g.setColor (p.colour ());
-    
+    drawNode (g, p, p.colour ());
+  }
+  
+  protected void drawNode (Graphics2D g, H p, Color c) {
+    g.setColor (c);
     mouse_state.update (p);
     Point2D pos = p.getPosition ();
     
@@ -394,8 +410,6 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       g.drawString (Integer.toString ((int)p.getSize ()),
                     (int)pos.getX () - (int)noderadius/2,
                     (int)pos.getY () + (int)noderadius/4);
-
-    
   }
 
   protected void draw_node_tip (Graphics2D g, H p) {
@@ -481,11 +495,53 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         }
       }
       
+      /* Redraw SPF edges for selected nodes in a highlight */
+      if (mouse_state.nodes_selected.size () == 1) {
+        /* case a: 1 selected node, highlight its full SPF tree */
+        for (H p : mouse_state.nodes_selected) {
+          ShortestPathFirst<H,link<H>> spf = spfcache.get (p);
+          /* should have had spf created before being put on nodes_selected */
+          assert spf != null;
+          
+          for (Edge<H, link<H>> edge : spf.edges ()) {
+            H p1 = edge.from ();
+            H p2 = edge.to ();
+            drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (), line_highlight);
+          }
+        }
+      }
+      if (mouse_state.nodes_selected.size () > 1) {
+        H first = null;
+        ShortestPathFirst<H,link<H>> spf = null;
+        /* case b: >1 selected nodes, 
+           highlight SPF tree from first to destinations*/
+        for (H p : mouse_state.nodes_selected) {
+          if (first == null) {
+            first = p;
+            spf = spfcache.get (first);
+            /* should have had spf created before being put on nodes_selected */
+            assert spf != null;
+            continue;
+          }
+          
+          /* remaining nodes, draw SPF edges from first to them */
+          for (Edge<H, link<H>> edge : spf.path (p)) {
+            H p1 = edge.from ();
+            H p2 = edge.to ();
+            drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (), line_highlight);
+          }
+        }
+      }
+
+      
       /* draw the nodes, in a second pass so they don't get edges drawn over,
        * and so all nodes (inc. disconnected) are drawn
        */
       for (H p : s.network) {
-        drawNode (g, p);
+        if (!mouse_state.nodes_selected.contains (p))
+          drawNode (g, p);
+        else
+          drawNode (g, p, p.colour().brighter().brighter());
       }
       
       /* Another pass if tool tip popups should always be shown */
