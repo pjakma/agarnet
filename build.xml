@@ -17,6 +17,7 @@
     <path id="project.class.path">
         <pathelement location="${multigraph.jar}"/>
         <pathelement location="${getopt.jar}"/>
+        <pathelement location="${junit.jar}"/>
     </path>
 
     <presetdef name="javac">
@@ -48,7 +49,7 @@
             </manifest>
         </jar>
     </target>
-
+ 
     <target name="test" depends="jar">
         <mkdir dir="${tests.dir}" />
 	<mkdir dir="${reports.dir}" />
@@ -60,7 +61,6 @@
 	  <classpath id="project.tests.classpath">
             <path refid="project.class.path"/> 
             <pathelement location="${classes.dir}"/>
-	    <pathelement location="${junit.jar}"/>
 	  </classpath>
 	</javac>
 
@@ -70,7 +70,6 @@
             <path refid="project.tests.classpath"/>
             <path refid="project.class.path"/>
             <pathelement location="${tests.dir}"/>
-            <pathelement path="${junit.jar}"/>
 	  </classpath>
 	  <batchtest todir="${reports.dir}">
             <fileset dir="${src.tests.dir}">
