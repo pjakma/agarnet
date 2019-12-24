@@ -34,10 +34,13 @@ import java.io.Serializable;
  * stack and the main network simulator.
  * @author paul
  *
- * @param <N> The type the simulation uses to identify hosts in the graph.
+ * @param <N> The type the simulation uses to represent hosts in
+ *            the graph. I.e,, the class/interface used for hosts.
+ *
  * @param <I> The type of the persistent, stable identifiers of hosts in the
  *            graph - this ID must be capable of being reliably serialised and
  *            deserialised to the same value.
+ *            I.e., the address used for hosts.
  */
 public class host<I extends Serializable,N> extends AbstractProtocol<I> {
   protected protocol<I> [] protocols;
