@@ -5,7 +5,9 @@
 # ./run.sh basicp2psim/simapp -g
 # ./run.sh topoapp -g
 
-PROJECTHOME="/home/pjakma/code"
+# If dependencies like MultiGraph are sibling directories
+#PROJECTHOME=$(realpath ..)
+PROJECTHOME=$(realpath $(dirname $0)/..)
 
 CPATH="$PROJECTHOME/MultiGraph/build/jar/MultiGraph.jar"
 CPATH="$CPATH:$PROJECTHOME/agarnet/build/jar/agarnet.jar"
