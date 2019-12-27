@@ -564,6 +564,10 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       for (H p : nodes_mouseover) {
         draw_node_tip (g, p);      
       }
+    } catch (java.util.ConcurrentModificationException e) {
+      // The simulation has updated things.  The anipanel is a fairly
+      // unimportant observer of it, and I don't really care about
+      // synchronising simulation changes to the graph just for anipanel.
     } finally {
       g.setTransform (save);
     }
