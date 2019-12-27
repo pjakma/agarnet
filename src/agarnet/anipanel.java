@@ -68,6 +68,16 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   
   /* Cache the SPF tree calculated for selected nodes. */
   Map<H, ShortestPathFirst<H,link<H>>> spfcache = new HashMap<> ();
+
+  private ShortestPathFirst<H,link<H>> spfcache_get (H n) {
+    ShortestPathFirst<H,link<H>> spf = spfcache.get (n);
+    if (spf == null) {
+      spf = new ShortestPathFirst<H,link<H>> (s.network);
+      spf.run (n);
+      spfcache.put (n, spf);
+    }
+    return spf;
+  }
   
   public static class options {
     public boolean always_show_tips = false;
@@ -212,14 +222,6 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         /* Selection state change for the node */
         if (!nodes_selected.remove (node_pressed)) {
           nodes_selected.add (node_pressed);
-          
-          ShortestPathFirst<H,link<H>> spf = spfcache.get (node_pressed);
-          
-          if (spf == null) {
-            spf = new ShortestPathFirst<H,link<H>> (anipanel.this.s.network);
-            spf.run (node_pressed);
-            spfcache.put (node_pressed, spf);
-          }
         }
         node_pressed = null;
         clicked = false;
@@ -515,7 +517,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         for (H p : mouse_state.nodes_selected) {
           if (first == null) {
             first = p;
-            spf = spfcache.get (first);
+            spf = spfcache_get (first);
             /* should have had spf created before being put on 
                nodes_selected */
             assert spf != null;
@@ -523,7 +525,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           }
           
           /* remaining nodes, draw SPF edges from first to them */
-          for (Edge<H, link<H>> edge : spf.path (p)) {
+          for (Edge<H, link<H>> edge : spf.edges (p)) {
             H p1 = edge.from ();
             H p2 = edge.to ();
             drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (),
@@ -533,7 +535,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         for (H p : nodes_mouseover) {
           if (p == first)
             continue;
-          for (Edge<H, link<H>> edge : spf.path (p)) {
+          for (Edge<H, link<H>> edge : spf.edges (p)) {
             H p1 = edge.from ();
             H p2 = edge.to ();
             drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (),
@@ -575,6 +577,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   }
 
   public void update (Observable arg0, Object arg1) {
+    spfcache.clear ();
     repaint ();
   }
 }
