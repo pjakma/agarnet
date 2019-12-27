@@ -435,7 +435,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   
   protected void paintComponent (Graphics g1) {
     Graphics2D g = (Graphics2D) g1;
-    LinkedList<H> nodes_mouseover = new LinkedList<> ();
+    LinkedHashSet<H> nodes_mouseover = new LinkedHashSet<> ();
     
     super.paintComponent (g);
     
@@ -485,32 +485,29 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
 
       }
       
-      /* Now draw the edges of mouse-over nodes, so they're on top */
-      for (H p : nodes_mouseover) {
-        for (Edge<H, link<H>> edge : s.network.edges (p)) {
-          if (edge.from () != p)
-            continue;
-          Point2D pos = p.getPosition ();
-          drawEdge (g, edge, p, pos, edge.to().getPosition (), line_highlight);
-        }
-      }
-      
-      /* Redraw SPF edges for selected nodes in a highlight */
-      if (mouse_state.nodes_selected.size () == 1) {
-        /* case a: 1 selected node, highlight its full SPF tree */
-        for (H p : mouse_state.nodes_selected) {
-          ShortestPathFirst<H,link<H>> spf = spfcache.get (p);
-          /* should have had spf created before being put on nodes_selected */
-          assert spf != null;
-          
-          for (Edge<H, link<H>> edge : spf.edges ()) {
-            H p1 = edge.from ();
-            H p2 = edge.to ();
-            drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (), line_highlight);
+      /* Edge highlighting. Two possible modes:
+       * 1. Node link highlighting, if just 1 node selected/over.
+       * 2. SPF mode, if more than 1.
+       */
+      if ((mouse_state.nodes_selected.size () + nodes_mouseover.size () == 1)
+          || (mouse_state.nodes_selected.size () == 0
+              && nodes_mouseover.size () > 0)) {
+        /* Now draw the edges of mouse-over nodes, so they're on top,
+         * when not in SPF mode */
+        List<H> nodes = new LinkedList<> ();
+        nodes.addAll (nodes_mouseover);
+        nodes.addAll (mouse_state.nodes_selected);
+        
+        for (H p : nodes) {
+          for (Edge<H, link<H>> edge : s.network.edges (p)) {
+            if (edge.from () != p)
+              continue;
+            Point2D pos = p.getPosition ();
+            drawEdge (g, edge, p, pos, edge.to().getPosition (), line_highlight);
           }
+          break;
         }
-      }
-      if (mouse_state.nodes_selected.size () > 1) {
+      } else if (mouse_state.nodes_selected.size () > 0) {
         H first = null;
         ShortestPathFirst<H,link<H>> spf = null;
         /* case b: >1 selected nodes, 
@@ -519,7 +516,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           if (first == null) {
             first = p;
             spf = spfcache.get (first);
-            /* should have had spf created before being put on nodes_selected */
+            /* should have had spf created before being put on 
+               nodes_selected */
             assert spf != null;
             continue;
           }
@@ -528,7 +526,18 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           for (Edge<H, link<H>> edge : spf.path (p)) {
             H p1 = edge.from ();
             H p2 = edge.to ();
-            drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (), line_highlight);
+            drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (),
+                      line_highlight);
+          }
+        }
+        for (H p : nodes_mouseover) {
+          if (p == first)
+            continue;
+          for (Edge<H, link<H>> edge : spf.path (p)) {
+            H p1 = edge.from ();
+            H p2 = edge.to ();
+            drawEdge (g, edge, p1, p1.getPosition (), p2.getPosition (),
+                      line_highlight);
           }
         }
       }
