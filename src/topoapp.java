@@ -135,7 +135,7 @@ public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {
   }
   
   protected void run () {
-    rewire ();
+    /* topoapp only does topology setup, then nothing more */
   }
   
   @Override
