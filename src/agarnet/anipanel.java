@@ -24,15 +24,11 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.NoninvertibleTransformException;
-import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Double;
 import java.awt.RenderingHints;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
-import java.awt.geom.Rectangle2D;
 import java.awt.FontMetrics;
+import java.awt.geom.*;
 
 import java.util.*;
 
@@ -60,6 +56,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   static final Color line = new Color (160,0,0);
   static final Color line_used = new Color (230,140,0);
   static final Color line_highlight = new Color (240,143, 143);
+  static final Color highlight = line_highlight;
   private options opts = new options().textlabels (true)
                                       .always_show_tips (false);;
   protected AffineTransform model_transform;
@@ -394,24 +391,43 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   }
   
   protected void drawNode (Graphics2D g, H p) {
-    drawNode (g, p, p.colour ());
+    drawNode (g, p, p.colour (), null);
+  }
+
+  protected void drawNode (Graphics2D g, H p, Color c) {
+    drawNode (g, p, c, null);
   }
   
-  protected void drawNode (Graphics2D g, H p, Color c) {
-    g.setColor (c);
+  protected void drawNode (Graphics2D g, H p, Color c, Color highlight) {
     mouse_state.update (p);
     Point2D pos = p.getPosition ();
+    Ellipse2D circle = new Ellipse2D.Double ();
+    Point2D corner = new Point2D.Double (pos.getX () - noderadius, 
+                                         pos.getY () + noderadius);
     
-    g.fillOval ((int)(pos.getX () - noderadius),
-                (int)(pos.getY () - noderadius),
-                (int)noderadius * 2, (int)noderadius * 2); 
     
-    g.setColor (Color.gray);
+    if (highlight != null) {
+      g.setColor (highlight);
+      
+      double l = Math.max ((noderadius + 3), (noderadius * 1.25));
+      Point2D cornerhighlight = new Point2D.Double (pos.getX () - l,
+                                                    pos.getY () + l); 
+      
+      circle.setFrameFromCenter (pos, cornerhighlight);
+      g.fill (circle);
+    }
+
+    circle.setFrameFromCenter (pos, corner);    
+    g.setColor (c);
+    g.fill (circle);
     
-    if (opts.textlabels)
+    if (opts.textlabels) {
+      g.setColor (Color.gray);
+      
       g.drawString (Integer.toString ((int)p.getSize ()),
                     (int)pos.getX () - (int)noderadius/2,
                     (int)pos.getY () + (int)noderadius/4);
+    }
   }
 
   protected void draw_node_tip (Graphics2D g, H p) {
@@ -437,6 +453,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   
   protected void paintComponent (Graphics g1) {
     Graphics2D g = (Graphics2D) g1;
+    /* Ordered set, so that the first selected node can be discerned */
     LinkedHashSet<H> nodes_mouseover = new LinkedHashSet<> ();
     
     super.paintComponent (g);
@@ -444,6 +461,12 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     if (opts.antialiasing) {
       g.setRenderingHint (RenderingHints.KEY_ANTIALIASING,
                           RenderingHints.VALUE_ANTIALIAS_ON);
+      g.setRenderingHint (RenderingHints.KEY_STROKE_CONTROL,
+                          RenderingHints.VALUE_STROKE_PURE);
+      /*g.setRenderingHint (RenderingHints.KEY_INTERPOLATION,
+                          RenderingHints.VALUE_INTERPOLATION_BICUBIC);*/
+      g.setRenderingHint (RenderingHints.KEY_RENDERING, 
+                          RenderingHints.VALUE_RENDER_QUALITY);
     }
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
@@ -468,8 +491,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         }
         
         for (Edge<H, link<H>> edge : s.network.edges (p)) {
-          /* we only want to process an edge once, luckily edges in an
-           * undirected graph still have a polarity we can filter on
+          /* we only want to process an edge once - as a nice feature, edges
+           * in an undirected graph still have a polarity to filter on.
            */
           if (edge.from () != p)
             continue;
@@ -552,7 +575,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
         if (!mouse_state.nodes_selected.contains (p))
           drawNode (g, p);
         else
-          drawNode (g, p, p.colour().brighter().brighter());
+          drawNode (g, p, p.colour().brighter (), highlight);
       }
       
       /* Another pass if tool tip popups should always be shown */
