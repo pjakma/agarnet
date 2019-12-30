@@ -42,41 +42,34 @@ import agarnet.variables.*;
  * @author paul
  *
  */
-public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {    
+public class topoapp extends AbstractCliApp<String, simhost<String>> implements Observer {
   @SuppressWarnings("unchecked")
-  private protocol<Long> [] new_protstack_peer () {
+  private protocol<String> [] new_protstack_peer () {
     return new protocol [] {
-      //new transport_protocol<Long, simhost, link<simhost>> (this, network),
-      new peer<Long,simhost> (this),
+      //new transport_protocol<String, simhost<String>, link<simhost<String>>> (this, network),
+      new peer<String,simhost<String>> (this),
     };
   }
   
   
-  private simhost get_host (Long id, simhost.Node type, boolean movable,
-                            protocol<Long> [] protos) {
-    simhost s;
+  private simhost<String> get_host (String id, simhost.Node type, boolean movable,
+                            protocol<String> [] protos) {
+    simhost<String> s;
     if ((s = id2node (id)) != null)
       return s;
-    s = new simhost (this, type, movable, protos.clone ());
+    s = new simhost<String> (this, type, movable, protos.clone ());
     s.setId (id);
     new_node (id, s);
     return s;
   }
   /* default get_host */
-  protected simhost get_host (Long id) {
+  protected simhost<String> get_host (String id) {
     return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
   }
   
   @Override
-  public simhost str2node (String sl) {
-    long l;
-    try {
-      l = Long.parseLong (sl);
-    } catch (NumberFormatException e) {
-      debug.println (debug.levels.WARNING, "Invalid host identifier: " + sl);
-      return null;
-    }
-    return get_host (l);
+  public simhost<String> str2node (String sl) {
+    return get_host (sl);
   }
   
   public topoapp (Dimension d) {
@@ -84,10 +77,9 @@ public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {
   }
   
   protected void add_initial_hosts () {
-    
     /* create a network */
-    for (int i = 0; i < conf_nodes.get (); i++) {      
-      network.add (get_host ((long) i));
+    for (int i = 0; i < conf_nodes.get (); i++) {
+      network.add (get_host (String.valueOf (i)));
     }
   }
   
@@ -119,7 +111,7 @@ public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {
     if (conf_gui.get ()) {
       anipanel.options opts
         = new anipanel.options ().antialiasing (conf_antialias.get ());
-      s.ap = new anipanel<Long,simhost> (s, opts);
+      s.ap = new anipanel<String,simhost<String>> (s, opts);
       jf = new JFrame ();
       jf.add (s.ap);
       jf.pack ();
@@ -152,12 +144,12 @@ public class topoapp extends AbstractCliApp<Long, simhost> implements Observer {
   protected boolean has_converged () {
     float f = 0;
     
-    for (simhost h : network) {
+    for (simhost<String> h : network) {
       f = h.getSize ();
       break;
     }
     
-    for (simhost p : network) {
+    for (simhost<String> p : network) {
       if (p.getSize () != f)
         return false;
     }
