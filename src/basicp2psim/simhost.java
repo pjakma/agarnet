@@ -3,6 +3,7 @@ package basicp2psim;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.Serializable;
 
 import org.nongnu.multigraph.structure.kshell_node;
 import org.nongnu.multigraph.structure.kshell_node_data;
@@ -13,11 +14,11 @@ import agarnet.protocols.host.AnimatableHost;
 
 /* This is a host type for:
  * 
- * PositionableHost, for a simulation using Long identifiers, and protocols.
+ * PositionableHost, for a simulation using I identifiers, and protocols.
  * 
  * Basically, this is what Java makes you do to get typedefs.
  */
-public class simhost extends AnimatableHost<Long, simhost>
+public class simhost<I extends Serializable> extends AnimatableHost<I, simhost<I>>
                      implements kshell_node {
   private static final long serialVersionUID = -7814606266303045281L;
   public final Node type;
@@ -44,9 +45,9 @@ public class simhost extends AnimatableHost<Long, simhost>
     }
   }
   
-  public simhost (Simulation<Long,simhost> simapp, 
+  public simhost (Simulation<I,simhost<I>> simapp, 
                   Node type, boolean movable,
-                  protocol<Long> [] pcols) {
+                  protocol<I> [] pcols) {
     super (simapp, movable, pcols);
     this.type = type;
   }
