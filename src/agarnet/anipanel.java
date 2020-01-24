@@ -471,7 +471,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
     AffineTransform save = g.getTransform ();
     g.transform (model_transform);
     
-    g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, (int) noderadius));
+    g.setFont (new Font (Font.SANS_SERIF, Font.PLAIN, 
+                         Math.max((int) noderadius, 7)));
     
     try {
       mouse_state.update ();
