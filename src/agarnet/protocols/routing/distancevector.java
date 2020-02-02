@@ -1,6 +1,6 @@
 /* This file is part of 'agarnet'
  *
- * Copyright (C) 2019 Paul Jakma
+ * Copyright (C) 2019, 2020 Paul Jakma
  *
  * agarnet is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,6 +19,7 @@ package agarnet.protocols.routing;
 
 import java.util.*;
 import java.io.Serializable;
+import java.io.IOException;
 
 import org.nongnu.multigraph.debug;
 
@@ -38,42 +39,51 @@ import agarnet.data.marshall;
  * @param <I> The type of the Identifiers used to address nodes in the
  * simulation.
  */
-public class distancevector<I extends Serializable> 
+public class distancevector<I extends agarnet.serialisable> 
              extends AbstractProtocol<I> {
+  static public enum msgtype { UPDATE, WITHDRAW };
   static public class message<I> 
-                implements Serializable {
+                implements Serializable, agarnet.serialisable {
     private static final long serialVersionUID = -5208759084907769495L;
-    public enum type { UPDATE, WITHDRAW };
     
-    final type type;
+    final msgtype type;
     final I destination;
     final int cost;
     
-    message (type type, I destination, int cost) {
+    message (msgtype type, I destination, int cost) {
       this.type = type;
       this.destination = destination;
       this.cost = cost;
     }
+    
+    @Override
+    public byte [] serialise () throws IOException {
+      return marshall.serialise (this);
+    }
   }
 
-  static public class vector<I> implements Comparable<vector<I>> {
+  public class vector implements Comparable<vector> {
     final I nexthop;
-    final int cost;
+    int cost;
+    /* Whether this vector is in the best-path set */
+    boolean best = false;
     
     vector (I nexthop, int cost) {
       this.nexthop = nexthop;
       this.cost = cost;
     }
     
-    public int compareTo (vector<I> other) {
+    public int compareTo (vector other) {
       return this.cost - other.cost;
     }
     public boolean equals (Object obj) {
       if (obj == this) return true;
       if (obj == null) return false;
-      if (!(obj instanceof vector<?>)) return false;
+      if (!(obj instanceof agarnet.protocols.routing.distancevector<?>.vector))
+        return false;
       
-      vector<?> o = (vector) obj;
+      @SuppressWarnings("unchecked")
+      vector o = (vector) obj;
       return this.cost == o.cost && this.nexthop.equals (o.nexthop); 
     }
     public int hashCode () {
@@ -82,87 +92,133 @@ public class distancevector<I extends Serializable>
   }
   
   /* Routes for a specific destination */
-  static class route_entries<I> {
-    SortedSet<vector<I>> vectors = new TreeSet<> ();
-    LinkedList<vector<I>> bestpaths = new LinkedList<> ();
-    Map<I,vector<I>> nexthop2vector = new HashMap<> ();
+  class route_entries {
+    final I dest;
+    SortedSet<vector> bestpaths = null;
+    SortedSet<vector> vectors = new TreeSet<> ();
+    Map<I,vector> nexthop2vector = new HashMap<> ();
     
-    Collection<vector<I>> bestpaths () {
-      return Collections.unmodifiableCollection (bestpaths);
+    route_entries (I dest) {
+      this.dest = dest;
     }
     
-    boolean update_bestpaths () {
-      bestpaths.clear ();
-      int cost = -1;
-      for (vector<I> v : vectors) {
-        if (bestpaths.size () == 0) {
-          cost = v.cost;
-        }
-        if (v.cost > cost)
-          break;
-        
-        bestpaths.add (v);
+    Collection<vector> bestpaths () {
+      if (bestpaths != null)
+        return Collections.unmodifiableCollection (bestpaths);
+      return Collections.emptySet ();
+    }
+    
+    int bestpathcost () {
+      if (bestpaths != null)
+        return bestpaths.first ().cost;
+      return Integer.MAX_VALUE;
+    }
+    
+    void update_bestpaths () {
+      if (vectors.size () == 0) {
+        bestpaths = null;
+        return;
       }
-      return true;
+      
+      int leastcost = vectors.first ().cost;
+      for (vector vec : vectors) {
+        if (vec.cost == leastcost)
+          continue;
+        bestpaths = vectors.headSet (vec);
+        break;
+      }
+      return;
     }
     
     boolean update (I nexthop, int cost) {
-      vector<I> vec = nexthop2vector.computeIfAbsent (
-        nexthop, 
-        k -> new vector<I> (k, cost)
-      );
+      vector vec = nexthop2vector.get (nexthop);
+      int prevleastcost = bestpathcost ();
       
-      vectors.remove (vec);
+      /* get a vector for this update, and make sure it's not in the vectors
+       * p-queue, one way or another */
+      if (vec == null) {
+        vec = new vector (nexthop, cost);        
+      } else {
+        vectors.remove (vec);
+        vec.cost = cost;
+      }
+      
+      /* Add the updated vector to the priority-queue */
       vectors.add (vec);
+      update_bestpaths ();
       
-      if (bestpaths.size () == 0 || bestpaths.peekFirst().cost > cost)
-        return update_bestpaths ();
+      /* Check if there was a change, and handle */
+      if (vec.cost > prevleastcost)
+        return false;
       
-      return false;
+      /* spurious / no-change update */
+      if (vec.cost == prevleastcost && vec.best)
+        return false;
+      
+      /* best and/or cost has changed:
+       * - Withdraw to any nexthop that has transitioned into best-set
+       * - Update to nodes not in best set. 
+       */
+      for (vector other : vectors) {
+        if (other.cost <= vec.cost) {
+          /* Send with-draw to any neighbours that have transitioned into
+           * best-set
+           */
+          if (!other.best)
+            send (other.nexthop, 
+                  new message<I> (msgtype.WITHDRAW, dest, -1));
+          other.best = true;
+          continue;
+        }
+        
+        /* update the rest, non-best */
+        send (other.nexthop,
+              new message<I> (msgtype.UPDATE, dest, vec.cost));
+        other.best = false;
+      }
+      
+      return true;
     }
     
     
-    boolean remove (I nexthop) {
-      vector<I> vec = nexthop2vector.remove (nexthop);
-      if (vec == null) return false;
+    void remove (I nexthop) {
+      vector vec = nexthop2vector.remove (nexthop);
+      if (vec == null) return;
       
       int cost = vec.cost;
       
       assert (vectors.remove (vec));
       
-      if (cost == bestpaths.peek ().cost)
-        return update_bestpaths ();
-      return false;
+      update_bestpaths ();
     }
   }
   
-  static class rib<I> {
-    Map<I,route_entries<I>> rib = new HashMap<> ();
+  class rib {
+    Map<I,route_entries> rib = new HashMap<> ();
     
-    boolean update (I dest, I nexthop, int cost) {
-      route_entries<I> entries = rib.computeIfAbsent (
+    void update (I dest, I nexthop, int cost) {
+      route_entries entries = rib.computeIfAbsent (
         dest,
-        k -> new route_entries<I> ()
+        k -> new route_entries (k)
       );
-      return entries.update (nexthop, cost);
+      entries.update (nexthop, cost);
     }
     
-    boolean remove (I dest, I nexthop, int cost) {
-      route_entries<I> entries = rib.get (dest);
-      if (entries == null)
-        return false;
-      return entries.remove (nexthop);
+    void remove (I dest, I nexthop) {
+      route_entries entries = rib.get (dest);
+      if (entries != null) /* this shouldn't happen really */
+        entries.remove (nexthop);
     }
     
-    Collection<vector<I>> bestpaths (I dest) {
-      route_entries<I> entries = rib.get (dest);
+    Collection<vector> bestpaths (I dest) {
+      route_entries entries = rib.get (dest);
       if (entries == null)
         return Collections.emptyList ();
       return entries.bestpaths ();
     }
   }
   
-  rib<I> rib = new rib<> ();
+  rib rib = new rib ();
   
   public void up (I linksrc, byte [] data) {
     message<I> msg = null;
@@ -174,13 +230,12 @@ public class distancevector<I extends Serializable>
       return;
     }
     
-    boolean change;
     switch (msg.type) {
       case UPDATE:
-        change = rib.update (msg.destination, linksrc, msg.cost);
+        rib.update (msg.destination, linksrc, msg.cost);
         break;
       case WITHDRAW:
-        change = rib.remove (msg.destination, linksrc, msg.cost);
+        rib.remove (msg.destination, linksrc);
         break;
     }
   }
