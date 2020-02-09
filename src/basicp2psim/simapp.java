@@ -30,8 +30,8 @@ import agarnet.variables.*;
 import agarnet.variables.atoms.*;
 
 
-public class simapp extends AbstractCliApp<Long, simhost> implements Observer {  
-  private RandomMove<simhost,link<simhost>> moverewire = null;
+public class simapp extends AbstractCliApp<Long, simhost<Long>> implements Observer {  
+  private RandomMove<simhost<Long>,link<simhost<Long>>> moverewire = null;
   
   /* Java's handling of generic arrays seems less than useful. Rather than
    * restricting up-conversions (i.e. casting foo<specific_type> [] to 
@@ -49,44 +49,44 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
   @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_peer () {
     return new protocol [] {
-      //new transport_protocol<Long, simhost, link<simhost>> (this, network),
-      new peer<Long,simhost> (this),
+      //new transport_protocol<Long, simhost, link<simhost<Long>>> (this, network),
+      new peer<Long,simhost<Long>> (this),
     };
   }
   @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_leech () {
     return new protocol [] {
-      //new transport_protocol<Long, simhost, link<simhost>> (this, network),
-      new leech<Long,simhost> (this),
+      //new transport_protocol<Long, simhost<Long>, link<simhost<Long>>> (this, network),
+      new leech<Long,simhost<Long>> (this),
     };
   }
   @SuppressWarnings("unchecked")
   private protocol<Long> [] new_protstack_seed () {
     return new protocol [] {
-      //new transport_protocol<Long, simhost, link<simhost>> (this, network),
-      new seed<Long,simhost> (this,
+      //new transport_protocol<Long, simhost<Long>, link<simhost<Long>>> (this, network),
+      new seed<Long,simhost<Long>> (this,
            ((NumberVar)conf_seeds.subopts.get ("max")).get ().intValue (),
            ((NumberVar)conf_seeds.subopts.get ("period")).get ().intValue ()),
     };
   }
   
-  private simhost get_host (Long id, simhost.Node type, boolean movable,
+  private simhost<Long> get_host (Long id, simhost.Node type, boolean movable,
                             protocol<Long> [] protos) {
-    simhost s;
+    simhost<Long> s;
     if ((s = id2node (id)) != null)
       return s;
-    s = new simhost (this, type, movable, protos.clone ());
+    s = new simhost<Long> (this, type, movable, protos.clone ());
     s.setId (id);
     new_node (id, s);
     return s;
   }
   @Override
-  protected simhost get_host (Long id) {
+  protected simhost<Long> get_host (Long id) {
     return get_host (id, simhost.Node.peer, true, new_protstack_peer ());
   }
   
   @Override
-  public simhost str2node (String name) {
+  public simhost<Long> str2node (String name) {
     long l;
     
     try {
@@ -108,7 +108,7 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
     
     /* create a network */
     for (int i = 0; i < conf_peers.get (); i++) {
-      simhost p;
+      simhost<Long> p;
       
       if (conf_leeches.get () < 1
           && r.nextFloat () <= conf_leeches.get ())
@@ -197,7 +197,7 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
     if (conf_gui.get ()) {
       anipanel.options opts 
         = new anipanel.options ().antialiasing (conf_antialias.get ());
-      s.ap = new anipanel<Long,simhost> (s, opts);
+      s.ap = new anipanel<Long,simhost<Long>> (s, opts);
       jf = new JFrame ();
       jf.add (s.ap);
       jf.pack ();
@@ -210,7 +210,7 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
     Layout.factory ("Random", s.network, s.model_size, 10).layout (1);
     
     if (((BooleanVar)conf_perturb.subopts.get ("perturb")).get ()) {
-      s.moverewire = new RandomMove<simhost,link<simhost>> (
+      s.moverewire = new RandomMove<simhost<Long>,link<simhost<Long>>> (
                       s.network, s.default_edge_labeler (), s.model_size,
                       ((FloatVar) conf_perturb.subopts.get ("speed")).get (),
                       ((IntVar) conf_perturb.subopts.get ("maxrange")).get ());
@@ -225,9 +225,9 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
     System.out.println ("numleeches: " + conf_leeches.get ());
     System.out.println ("Leeches: "
                         + TraversalMetrics.count (network, 
-                            new TraversalMetrics.node_test<simhost> () {
+                            new TraversalMetrics.node_test<simhost<Long>> () {
                               @Override
-                              public boolean test (simhost test) {
+                              public boolean test (simhost<Long> test) {
                                 return (test.type == simhost.Node.leech);
                               }
                             }));
@@ -243,12 +243,12 @@ public class simapp extends AbstractCliApp<Long, simhost> implements Observer {
   protected boolean has_converged () {
     float f = 0;
     
-    for (simhost h : network) {
+    for (simhost<Long> h : network) {
       f = h.getSize ();
       break;
     }
     
-    for (simhost p : network) {
+    for (simhost<Long> p : network) {
       if (p.getSize () != f)
         return false;
     }
