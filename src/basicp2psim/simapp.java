@@ -46,21 +46,21 @@ public class simapp extends AbstractCliApp<Long, simhost<Long>> implements Obser
    * the reasoning in the "Generics Tutorial" PDF surely invites a better
    * solution.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings ({"unchecked","rawtypes"})  
   private protocol<Long> [] new_protstack_peer () {
     return new protocol [] {
       //new transport_protocol<Long, simhost, link<simhost<Long>>> (this, network),
       new peer<Long,simhost<Long>> (this),
     };
   }
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings ({"unchecked","rawtypes"})  
   private protocol<Long> [] new_protstack_leech () {
     return new protocol [] {
       //new transport_protocol<Long, simhost<Long>, link<simhost<Long>>> (this, network),
       new leech<Long,simhost<Long>> (this),
     };
   }
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings ({"unchecked","rawtypes"})  
   private protocol<Long> [] new_protstack_seed () {
     return new protocol [] {
       //new transport_protocol<Long, simhost<Long>, link<simhost<Long>>> (this, network),

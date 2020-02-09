@@ -43,7 +43,7 @@ import agarnet.variables.*;
  *
  */
 public class topoapp extends AbstractCliApp<String, simhost<String>> implements Observer {
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked","rawtypes"})
   private protocol<String> [] new_protstack_peer () {
     return new protocol [] {
       //new transport_protocol<String, simhost<String>, link<simhost<String>>> (this, network),

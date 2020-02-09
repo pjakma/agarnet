@@ -70,7 +70,7 @@ public class unilink<I> extends abstract_tickable
   private Queue<byte []> [] linkq;
   private int qhead = 0;
   
-  @SuppressWarnings ("unchecked")
+  @SuppressWarnings ({"unchecked","rawtypes"})
   private void _init_linkq () {
     linkq = (Queue<byte []> []) new LinkedList [latency];
     

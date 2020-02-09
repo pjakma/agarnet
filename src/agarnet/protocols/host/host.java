@@ -207,7 +207,7 @@ public class host<I extends Serializable,N> extends AbstractProtocol<I> {
     setChanged ();
   }
   
-  @SuppressWarnings ("unchecked")
+  @SuppressWarnings ({"unchecked","rawtypes"})
   public protocol<I> [] protocols () {
     protocol<I> [] newp = new protocol [protocols.length];
     System.arraycopy (protocols, 0, newp, 0, protocols.length);
