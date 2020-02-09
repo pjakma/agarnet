@@ -170,6 +170,7 @@ public abstract class AbstractSim<I extends Serializable,
     Set<H> partition;
     final synchronisation_gate nodeg, edgeg, doneg;
     final int pid;
+    private boolean run = true;
 
     partition_runner (int id, Set<H> partition,
                       synchronisation_gate nodeg,
@@ -181,6 +182,11 @@ public abstract class AbstractSim<I extends Serializable,
       this.partition = partition;
       this.pid = id;
     }
+    
+    public void finish () {
+      run = false;
+    }
+    
     @Override
     public String toString () {
       return String.format ("partition(id: %d, tid: %d, size: %d %s / %s / %s)",
@@ -190,7 +196,7 @@ public abstract class AbstractSim<I extends Serializable,
     @Override
     public void run () {
       
-      while (true) {
+      while (run) {
         nodeg.wait_ready ();
         for (final H n : partition) {
           n.tick ();
@@ -263,7 +269,7 @@ public abstract class AbstractSim<I extends Serializable,
     }
 
     for (final partition_runner pr : partition_runners)
-      pr.stop ();
+      pr.finish ();
   }
   
   private static class recent_activity {
