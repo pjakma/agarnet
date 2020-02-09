@@ -41,6 +41,6 @@ import java.io.IOException;
  * well-typed way, that I could find, other than with tricks with reflection
  * - which would defeat the performance motivation for this interface.
  */
-public interface serialisable {
+public interface serialisable extends java.io.Serializable {
   public byte [] serialise () throws IOException;
 }

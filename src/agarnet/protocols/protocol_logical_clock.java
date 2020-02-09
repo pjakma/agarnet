@@ -43,6 +43,7 @@ public class protocol_logical_clock<N extends Serializable> extends AbstractProt
     time = 0;
   }
   static public class logical_clock_msg implements agarnet.serialisable {
+    static final long serialVersionUID = 6220316327321966622L;
     final byte [] data;
     final long tstamp;
     
