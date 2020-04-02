@@ -31,10 +31,10 @@ import java.awt.FontMetrics;
 import java.awt.geom.*;
 
 import java.util.*;
+import java.lang.ProcessBuilder;
 
 import java.io.Serializable;
 import java.awt.event.ComponentEvent;
-
 import javax.swing.JPanel;
 
 import org.nongnu.multigraph.Edge;
@@ -57,11 +57,14 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   static final Color line_used = new Color (230,140,0);
   static final Color line_highlight = new Color (240,143, 143);
   static final Color highlight = line_highlight;
+  static final String[] command = { "xterm", "-e", "ssh" };
   private options opts = new options().textlabels (true)
                                       .always_show_tips (false);;
   protected AffineTransform model_transform;
   protected double noderadius;
   protected mouse_state mouse_state = new mouse_state ();
+  
+  protected boolean cmd_mode = false;
   
   /* Cache the SPF tree calculated for selected nodes. */
   Map<H, ShortestPathFirst<H,link<H>>> spfcache = new HashMap<> ();
@@ -216,8 +219,23 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
       
       /* handle clicks */
       if (clicked && node_pressed != null) {
+        /* cmd mode overrides select mode */
+        if (cmd_mode) {
+          String[] cmd = Arrays.copyOf(anipanel.command,
+                                       anipanel.command.length + 1);
+          cmd[cmd.length - 1] = node_pressed.toString ();
+          ProcessBuilder pb = new ProcessBuilder();
+          pb.command(cmd);
+          try {
+            pb.start ();
+          } catch (Exception e) {
+            System.err.println("Failed to start command for " 
+                               + node_pressed 
+                               + ", exception: " + e);
+          }
+        }
         /* Selection state change for the node */
-        if (!nodes_selected.remove (node_pressed)) {
+        else if (!nodes_selected.remove (node_pressed)) {
           nodes_selected.add (node_pressed);
         }
         node_pressed = null;
@@ -268,6 +286,12 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           case 'c':
           case 'C':
             mouse_state.nodes_selected.clear ();
+            cmd_mode = false;
+            break;
+          case 's':
+          case 'S':
+            cmd_mode = !cmd_mode;
+            break;
         }
       }
       @Override
