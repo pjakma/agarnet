@@ -39,7 +39,7 @@ import agarnet.data.marshall;
  * @param <I> The type of the Identifiers used to address nodes in the
  * simulation.
  */
-public class distancevector<I extends agarnet.serialisable> 
+public class distancevector<I extends Serializable> 
              extends AbstractProtocol<I> {
   static public enum msgtype { UPDATE, WITHDRAW };
   static public class message<I> 
