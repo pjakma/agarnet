@@ -182,11 +182,11 @@ public abstract class AbstractSim<I extends Serializable,
       this.partition = partition;
       this.pid = id;
     }
-    
+
     public void finish () {
       run = false;
     }
-    
+
     @Override
     public String toString () {
       return String.format ("partition(id: %d, tid: %d, size: %d %s / %s / %s)",

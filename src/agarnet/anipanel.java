@@ -46,11 +46,8 @@ import agarnet.link.link;
 import agarnet.protocols.host.AnimatableHost;
 
 public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
-		extends JPanel
-		implements Observer {
-  /**
-   * 
-   */
+             extends JPanel
+             implements Observer {
   private static final long serialVersionUID = 4635455780045359317L;
   Simulation2D<I,H> s;
   static final Color line = new Color (160,0,0);
@@ -65,7 +62,7 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
   protected mouse_state mouse_state = new mouse_state ();
   
   protected boolean cmd_mode = false;
-  
+
   /* Cache the SPF tree calculated for selected nodes. */
   Map<H, ShortestPathFirst<H,link<H>>> spfcache = new HashMap<> ();
 
@@ -229,8 +226,8 @@ public class anipanel<I extends Serializable, H extends AnimatableHost<I,H>>
           try {
             pb.start ();
           } catch (Exception e) {
-            System.err.println("Failed to start command for " 
-                               + node_pressed 
+            System.err.println("Failed to start command for "
+                               + node_pressed
                                + ", exception: " + e);
           }
         }

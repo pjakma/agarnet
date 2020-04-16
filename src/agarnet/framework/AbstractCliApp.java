@@ -205,15 +205,15 @@ public abstract class AbstractCliApp<I extends Serializable,
                "jiggle","Scalar for a noise factor to add to algorithm",
                0, Float.MAX_VALUE)
       });
-          
+      
       put ("Null", new ObjectVar [] {
            new BooleanVar ("Null", "Null layout"),
       });
-          
+      
       put ("Radial", new ObjectVar [] {
            new BooleanVar ("Radial", "Lay nodes out radially"),
       });
-          
+      
       put ("Random", new ObjectVar [] {
            new BooleanVar (
              "Random","randomly placed within the model dimension"),
@@ -839,7 +839,6 @@ public abstract class AbstractCliApp<I extends Serializable,
       
       if (conf_debug.subopts.get ("invert").isSet ())
         debug.invert (true);
-      
     }
   }
 

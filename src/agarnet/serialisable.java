@@ -35,7 +35,7 @@ import java.io.IOException;
  * This interface expects that an implementing class T also implements a
  * static method:
  * 
- * 	static T deserialise (byte [])
+ *   static T deserialise (byte [])
  *
  * There is no reasonable way to specify this requirement in Java, in a
  * well-typed way, that I could find, other than with tricks with reflection
