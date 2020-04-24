@@ -23,6 +23,13 @@ import java.util.Map;
 import org.nongnu.multigraph.debug;
 
 public class synchronisation_gate {
+  /**
+   * Class to act as a "starting gate" form of synchronisation. Block
+   * all threads that wait on this synchronisation object (via wait_ready),
+   * until the specified number of threads are waiting.
+   *
+   * The inverse of a semaphore, in a way.
+   */
   private final int num;
   private int waiting;
   private int finished;
@@ -61,14 +68,14 @@ public class synchronisation_gate {
     return (s != null) ? s.toString () : "";
   }
   
-  synchronized void wait_ready () {
+  synchronized void wait_ready () throws InterruptedException {
     waiting++;
-    while (waiting + finished < num)
-      try {
-        trace ("wr");
-        debug.printf ("before: %s\n", this);
-        this.wait ();
-      } catch (InterruptedException ex) {}
+
+    while (waiting + finished < num) {
+      trace ("wr");
+      debug.printf ("before: %s\n", this);
+      this.wait ();
+    }
     
     if (waiting == num)
       this.notifyAll ();
@@ -84,10 +91,10 @@ public class synchronisation_gate {
   }
   
   synchronized public String toString () {
-    return String.format ("gate(tid/o/r/w: %d/%d/%d/%s)", 
+    return String.format ("gate(tid/o/r/f/w: %d/%d/%d/%d/%s)", 
                           Thread.currentThread ().getId (),
                           this.hashCode (),
-                          waiting,
+                          waiting, finished,
                           trace ());
   }
 }

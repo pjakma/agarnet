@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.nongnu.multigraph.Graph;
 import org.nongnu.multigraph.Edge;
@@ -170,7 +171,7 @@ public abstract class AbstractSim<I extends Serializable,
     Set<H> partition;
     final synchronisation_gate nodeg, edgeg, doneg;
     final int pid;
-    private boolean run = true;
+    private AtomicBoolean run = new AtomicBoolean(true);
 
     partition_runner (int id, Set<H> partition,
                       synchronisation_gate nodeg,
@@ -184,7 +185,8 @@ public abstract class AbstractSim<I extends Serializable,
     }
 
     public void finish () {
-      run = false;
+      run.set (false);
+      this.interrupt ();
     }
 
     @Override
@@ -196,19 +198,23 @@ public abstract class AbstractSim<I extends Serializable,
     @Override
     public void run () {
       
-      while (run) {
-        nodeg.wait_ready ();
-        for (final H n : partition) {
-          n.tick ();
-          debug.printf ("%s: tick node %s\n", this, n);
+      try {
+        while (run.get ()) {
+          nodeg.wait_ready ();
+          for (final H n : partition) {
+            n.tick ();
+            debug.printf ("%s: tick node %s\n", this, n);
+          }
+          
+          edgeg.wait_ready ();
+          for (final H n : partition) {
+            debug.printf ("%s: ticking edges of %s\n", this, n);
+            tick_edges_of (n);
+          }
+          doneg.wait_ready ();
         }
-        
-        edgeg.wait_ready ();
-        for (final H n : partition) {
-          debug.printf ("%s: ticking edges of %s\n", this, n);
-          tick_edges_of (n);
-        }
-        doneg.wait_ready ();
+      } catch (InterruptedException ex) {
+        debug.println("breaking...");
       }
     }
   }
@@ -267,7 +273,6 @@ public abstract class AbstractSim<I extends Serializable,
       System.out.printf ("Runtime: %.3f seconds\n", (float)(fin - start) / 1000);
       describe_end (i);
     }
-
     for (final partition_runner pr : partition_runners)
       pr.finish ();
   }
@@ -346,15 +351,26 @@ public abstract class AbstractSim<I extends Serializable,
       //  = this.get_random_tick () ? network.random_node_iterable ()
       //                            : network;
       
-      debug.println ("wait to queue nodes");
-      node_gate.wait_ready ();
-      
-      debug.println ("wait to queue links");
-      edge_gate.wait_ready ();
-      
-      debug.println ("wait till links are done");
-      done_gate.wait_ready ();
-      debug.println ("links done");
+      try {
+        debug.println ("wait to queue nodes");
+        node_gate.wait_ready ();
+        
+        debug.println ("wait to queue links");
+        edge_gate.wait_ready ();
+        
+        debug.println ("wait till links are done");
+        done_gate.wait_ready ();
+        debug.println ("links done");
+      } catch (InterruptedException ex) {
+        /* Should never get this, least not due to the sim, as it is the
+         * main thread that calls finish() on the partition runners when
+         * main thread has determined sim has convered. If it has done so,
+         * it should not go back into this loop, and should not go into
+         * gate wait_ready()'s. So this should not happen....
+         */
+        debug.println (debug.levels.ERROR,
+                       "Interrupt exception in sim run()!");
+      }
       
       perturb ();
       
