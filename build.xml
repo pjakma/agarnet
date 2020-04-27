@@ -1,4 +1,6 @@
 <project name="agarnet" default="compile">
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"/>
+    
     <property file="${user.home}/.ant.global.properties"/>
     <property file="build.properties"/>
         
@@ -13,6 +15,7 @@
     <property name="getopt.jar" value="lib/gnu-getopt.jar"/>
     <property name="junit.jar"   value="lib/junit-4.jar" />
     <property name="reports.dir" value="reports" />
+    <property name="findbugs.home" value="/usr/share/findbugs" />
 
     <path id="project.class.path">
         <pathelement location="${multigraph.jar}"/>
@@ -50,6 +53,15 @@
         </jar>
     </target>
  
+    <target name="findbugs" depends="jar">
+    	<findbugs home="${findbugs.home}"
+    		  output="html"
+    		  outputFile="findbugs-agarnet.html" >
+    	   <sourcePath path="${src.dir}" />
+    	   <class location="${jar.dir}/agarnet.jar" />
+    	</findbugs>
+    </target>
+
     <target name="test" depends="jar">
         <mkdir dir="${tests.dir}" />
 	<mkdir dir="${reports.dir}" />
