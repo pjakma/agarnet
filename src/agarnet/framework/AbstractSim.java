@@ -110,7 +110,7 @@ public abstract class AbstractSim<I extends Serializable,
    */
   static private class order_partition<N,E> implements PartitionCallbacks<N,E> {
     private int count = 0;
-    private int num = Math.max (Runtime.getRuntime ().availableProcessors () - 2, 1);
+    private final int num = Math.max (Runtime.getRuntime ().availableProcessors () - 2, 1);
     private Map<N,Integer> map = new HashMap<> ();
 
     @Override
@@ -136,7 +136,8 @@ public abstract class AbstractSim<I extends Serializable,
   public AbstractSim (Dimension d) {
     super (new PartitionGraph<H,link<H>> (new order_partition<H,link<H>> ()), d);
     partition_graph = (PartitionGraph<H, link<H>>) network;
-    network.addObserver (this);
+    network.edge_events ().addObserver (this);
+    //network.addObserver (this);
   }
   
   final protected void reset_network () {
@@ -164,8 +165,6 @@ public abstract class AbstractSim<I extends Serializable,
   protected void initial_setup () {
     add_initial_hosts ();
   }
-
-  
 
   private class partition_runner extends Thread {
     Set<H> partition;
@@ -197,7 +196,6 @@ public abstract class AbstractSim<I extends Serializable,
     }
     @Override
     public void run () {
-      
       try {
         while (run.get ()) {
           nodeg.wait_ready ();
@@ -227,6 +225,7 @@ public abstract class AbstractSim<I extends Serializable,
   final public void main_loop () {
     debug.println ("initial setup");
     network.plugObservable ();
+    network.edge_events ().plugObservable ();
 
     node_gate = new synchronisation_gate (partition_graph.partitions () + 1);
     edge_gate = new synchronisation_gate (partition_graph.partitions () + 1);
@@ -256,12 +255,14 @@ public abstract class AbstractSim<I extends Serializable,
       System.out.println ("\n# starting run " + i + " / " + get_runs ());
       
       network.plugObservable ();
+      network.edge_events ().plugObservable ();
       sim_stats.ticks = 0;
       sim_stats.messages_sent.set (0);
       run_setup (i);
       setChanged ();
       notifyObservers ();
       network.unplugObservable ();
+      network.edge_events ().unplugObservable ();
 
       describe_begin (i);
       
@@ -422,7 +423,13 @@ public abstract class AbstractSim<I extends Serializable,
         ids.add (idmap.getId (s));
     return ids;
   }
-  
+
+  @Override
+  final public boolean connected (I a, I b) {
+    Set<H> connected = network.successors (idmap.getNode (a));
+    return connected.contains (idmap.getNode (b));
+  }
+
   private void tick_edges_of (H h) {
     for (Edge<H,link<H>> e : network.edges (h)) {
       debug.printf ("%s: edge %s\n", h, e);
@@ -456,7 +463,7 @@ public abstract class AbstractSim<I extends Serializable,
     H hto = idmap.getNode (to);
     Edge<H, link<H>> edge = network.edge (hfrom, hto);
     
-    debug.printf ("tx %d to %d, edge: %s\n", from, to, edge);
+    debug.printf ("tx %s to %s, edge: %s\n", from, to, edge);
     
     if (edge == null) {
       debug.printf (debug.levels.ERROR, "tx called for non-existent edge %s -> %s!",
@@ -472,10 +479,11 @@ public abstract class AbstractSim<I extends Serializable,
   
   @Override
   final public void update (Observable o, Object arg) {
-    debug.printf ("update, in setup: %s, object: %s\n",
-                  doing_network_setup, ((H) null));
-    if (doing_network_setup)
-      return;
+    debug.printf ("update, in setup: %s, arg: %s\n",
+                  doing_network_setup, 
+                  arg != null ? arg : "(null)");
+    //if (doing_network_setup)
+    //  return;
     
     setChanged ();
     notifyObservers ();
@@ -483,13 +491,32 @@ public abstract class AbstractSim<I extends Serializable,
     /* we have to notify all hosts, so long as we don't have an in-sim
      * routing protocol
      */
-    //if (arg != null)
-    //  ((N) arg).link_update ();
-    //else
+    if (arg != null) {
+      if (arg instanceof link) {
+        link<H> link = (link<H>) arg;
+        H h1 = link.id1 (),
+          h2 = link.id2 ();
+        debug.println("link instance " + h1.getId() + ", " + h2.getId());
+        if (connected (h1.getId (), h2.getId ())) {
+          debug.println("calling link add..");
+          h2.link_add (h1.getId ());
+          h1.link_add (h2.getId ());
+        } else {
+          debug.println("calling link remove..");
+          h2.link_remove (h1.getId ());
+          h1.link_remove (h2.getId ());
+        }
+      } else {
+        debug.println("host instance");
+        ((H) arg).link_update ();
+      }
+    } else {
+      debug.println("no arg");
       for (H h : network)
         h.link_update ();
+    }
   }
-  
+
   protected void rewire_update_hosts () {
     for (H p : network)
       rewire_update_host (p);

@@ -201,9 +201,25 @@ public class host<I extends Serializable,N> extends AbstractProtocol<I> {
   }
   
   @Override
+  @Deprecated
   public void link_update () {
     for (int i = 0; i < protocols.length; i++)
       protocols[i].link_update ();
+  }
+
+  @Override
+  public void link_add (I id) {
+    debug.println(selfId + ": for " + id);
+    for (int i = 0; i < protocols.length; i++)
+      protocols[i].link_add (id);
+    setChanged ();
+  }
+
+  @Override
+  public void link_remove (I id) {
+    debug.println(selfId + ": for " + id);
+    for (int i = 0; i < protocols.length; i++)
+      protocols[i].link_remove (id);
     setChanged ();
   }
   

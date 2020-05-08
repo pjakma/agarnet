@@ -96,9 +96,20 @@ public class PositionableHost<I extends Serializable,N>
   }
   
   @Override
+  @Deprecated
   public void link_update () {
     host.link_update ();
   }
+  
+  @Override
+  public void link_add (I id) {
+   host.link_add (id);
+  }
+  @Override
+  public void link_remove (I id) {
+   host.link_remove (id);
+  }
+  
   @Override
   public boolean hasChanged () {
     return host.hasChanged ();

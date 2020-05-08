@@ -28,8 +28,8 @@ import agarnet.link.link;
  * the interface though which hosts interact with the underlying Simulation.
  *
  * @author paul
- * @param <I> The Id type used to identify hosts nodes
- * @param <H> The type used for Hosts in the Simulation
+ * @param <I> The Id type used to identify the hosts/nodes in the simulation
+ * @param <H> The type used for the objects of Hosts in the Simulation
  */
 public abstract class Simulation<I,H> extends Observable {
   /* Abstract class because Observable is a class, not an interface.
@@ -45,6 +45,14 @@ public abstract class Simulation<I,H> extends Observable {
    * @return The set of nodes which are connected to the given node.
    */
   abstract public Set<I> connected (I node);
+
+  /**
+  * Whether the nodes are connected.
+   * @param a Node to query the simulation about
+   * @param b Node to query the simulation about
+   * @return Whether the nodes are connected.
+   */
+  abstract public boolean connected (I a, I b);
 	
   /**
    * Transmit the packet from one node to the other, I.e. link-layer. 

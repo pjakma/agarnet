@@ -18,6 +18,7 @@
 package agarnet.protocols;
 
 import java.io.IOException;
+import java.util.*;
 
 import org.nongnu.multigraph.debug;
 
@@ -29,6 +30,7 @@ public abstract class AbstractProtocol<N>
   protected long ticks = 0;
   private final int stat_length = stat.values ().length;
   private boolean changed = false;
+  protected Set<N> connected = new HashSet<> ();;
   
   /* Unique ID for this instance of this type of protocol - it may
    * be shared across protocols within the same host
@@ -90,7 +92,27 @@ public abstract class AbstractProtocol<N>
   }
   
   public void tick () { ticks++; clearChanged (); }
-  public void link_update () { setChanged (); }
+  
+  @Override
+  public void link_add (N node) {
+    debug.printf ("%s: of %s\n", selfId, node);
+    connected.add (node);
+    setChanged ();
+  }
+
+  @Override
+  public void link_remove (N node) {
+    debug.printf ("%s: of %s\n", selfId, node);
+    connected.remove (node);
+    setChanged ();
+  }
+
+  @Override
+  @Deprecated  
+  public void link_update () { 
+    debug.printf ("%s\n", selfId);
+    setChanged ();
+  }
   
   /* These are in the spirit of the Observable class, however the decision
    * to not implement the rest of Observable is a deliberate one. Such

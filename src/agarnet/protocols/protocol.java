@@ -71,11 +71,28 @@ public interface protocol<N>
    * @param below
    */
   void insert (protocol<N> above, protocol<N> below);
+
   /**
    * Notify a protocol of probable change in link status. I.e. one or more
    * hosts have been connected or disconnected from this host.
+   * @deprecated
    */
   void link_update ();
+  
+  /**
+   * Notify a protocol of added link to a neighbouring host.
+   */
+  default void link_add (N n) {
+    link_update ();
+  }
+
+  /**
+   * Notify a protocol of removal of a link to a neighbouring host.
+   */
+  default void link_remove (N n) {
+    link_update ();
+  }
+  
   /**
    * In the spirit of the Observable interface, however we do not want
    * to burden protocols generally with the full overhead of Observable. A
