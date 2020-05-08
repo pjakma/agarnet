@@ -19,31 +19,38 @@ package agarnet.link;
 
 import agarnet.framework.resetable;
 
+import java.util.*;
+
 /** 
  * A duplex link. Basically an administrative wrapper around a pair of simplex links.
  * @author paul
  */
 public class link<I> implements resetable {
   final unilink<I> ul1, ul2;
+  private final List<I> host_list;
   
   public link (I id1, I id2) {
     this.ul1 = new unilink<> (id1);
     this.ul2 = new unilink<> (id2);
+    host_list = Arrays.asList(id1, id2);
   }
 
   public link (I id1, I id2, int bandwidth, int latency) {
     this.ul1 = new unilink<> (id1, bandwidth, latency);
     this.ul2 = new unilink<> (id2, bandwidth, latency);
+    host_list = Arrays.asList(id1, id2);
   }
 
   public link (I id1, I id2, int bandwidth, int latency, int capacity) {
     this.ul1 = new unilink<> (id1, bandwidth, latency, capacity);
     this.ul2 = new unilink<> (id2, bandwidth, latency, capacity);
+    host_list = Arrays.asList(id1, id2);
   }
   
   public link (unilink<I> l1, unilink<I> l2) {
     this.ul1 = l1;
     this.ul2 = l2;
+    host_list = Arrays.asList(l1.id, l2.id);
   }
   
   public unilink<I> get (I id) {
@@ -52,6 +59,13 @@ public class link<I> implements resetable {
     if (ul2.id.equals (id))
       return ul2;
     return null;
+  }
+
+  public I id1 () { 
+    return ul1.id;
+  }
+  public I id2 () { 
+    return ul2.id;
   }
 
   public void reset () {

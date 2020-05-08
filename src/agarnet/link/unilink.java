@@ -46,7 +46,7 @@ public class unilink<I> extends abstract_tickable
   /**
    * An identifier for this link
    */
-  final I id;
+  public final I id;
   
   /* The buffering capacity of this link, in bytes */
   public final int capacity;
