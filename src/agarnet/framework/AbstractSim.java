@@ -478,6 +478,8 @@ public abstract class AbstractSim<I extends Serializable,
   }
   
   @Override
+  @SuppressWarnings({ "deprecation" /* link_update() */,
+                      "unchecked"   /* cast of arg to link<H> */ })
   final public void update (Observable o, Object arg) {
     debug.printf ("update, in setup: %s, arg: %s\n",
                   doing_network_setup, 

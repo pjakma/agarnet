@@ -77,6 +77,7 @@ public interface protocol<N>
    * hosts have been connected or disconnected from this host.
    * @deprecated
    */
+  @Deprecated
   void link_update ();
   
   /**

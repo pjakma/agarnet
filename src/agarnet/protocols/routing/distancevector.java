@@ -511,7 +511,8 @@ public class distancevector<I extends Serializable>
     super.link_remove (neighbour);
     /* do stuff... go through the rib and update affected vectors */
   }
-  
+
+  @Deprecated
   public void link_update (I neighbour) {
     debug.printf("%s: %s\n", selfId, neighbour);
     super.link_update ();
