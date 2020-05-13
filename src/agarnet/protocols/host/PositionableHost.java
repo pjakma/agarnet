@@ -1,6 +1,7 @@
 /* This file is part of 'agarnet'
  *
  * Copyright (C) 201, 2011, 2013, 2015 Paul Jakma
+ * Copyright (c) Facebook, Inc. and its affiliates
  *
  * agarnet is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
