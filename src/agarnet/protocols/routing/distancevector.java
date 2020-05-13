@@ -23,6 +23,12 @@ import java.io.Serializable;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+
+
 import org.nongnu.multigraph.debug;
 
 import agarnet.protocols.AbstractProtocol;
@@ -43,11 +49,29 @@ import agarnet.data.marshall;
  */
 public class distancevector<I extends Serializable>
              extends AbstractProtocol<I> {
-  static public enum msgtype { UPDATE, WITHDRAW };
-  static public class message<I> 
+  static public enum msgtype { 
+    UPDATE(1), WITHDRAW(2);
+    
+    public final int value;
+    
+    msgtype (int value) {
+      this.value = value;
+    }
+    
+    public static msgtype fromInt (int value) {
+      switch (value) {
+        case 1: return UPDATE;
+        case 2: return WITHDRAW;
+        default: throw new IllegalArgumentException("unknown value " + value);
+      }
+    }
+  };
+  
+  public static class message<I> 
                 implements Serializable, agarnet.serialisable {
     private static final long serialVersionUID = -5208759084907769495L;
-
+    private static boolean direct_serialisation = false;
+    
     final msgtype type;
     final I destination;
     final int cost;
@@ -56,11 +80,56 @@ public class distancevector<I extends Serializable>
       this.type = type;
       this.destination = destination;
       this.cost = cost;
+      
+      if (marshall.serialisable_by_datastream (destination)) {
+        direct_serialisation = true;
+      }
     }
 
     @Override
     public byte [] serialise () throws IOException {
-      return marshall.serialise (this);
+      if (direct_serialisation) {
+        /* marshall knows how to do a data-stream based serialisation of
+         * the I type being used for destination, great - more efficient!
+         * use that.
+         */
+        ByteArrayOutputStream bos = new ByteArrayOutputStream ();
+        DataOutputStream dos = new DataOutputStream (bos);
+        
+        dos.writeInt (type.value);
+        dos.writeInt (cost);
+        marshall.serialise (dos, destination);
+        
+        return bos.toByteArray ();
+      } else {
+        /* Otherwise has to be via Java Object Serialisation, more overhead */
+        return marshall.serialise (this);
+      }
+    }
+    
+    public static <I> message<I> deserialise (I obj, byte [] bytes)
+                                 throws IOException, ClassNotFoundException {
+      if (direct_serialisation) {
+        /* great, more efficient Data*Stream case */
+        ByteArrayInputStream bis = new ByteArrayInputStream (bytes);
+        DataInputStream dis = new DataInputStream (bis);
+        msgtype type = msgtype.fromInt (dis.readInt ());
+        int cost = dis.readInt ();
+        I destination = null;
+        
+        byte [] destbytes
+          = Arrays.copyOfRange (bytes, 
+                                bytes.length - bis.available (),
+                                bytes.length);
+        DataInputStream destdis 
+          = new DataInputStream (new ByteArrayInputStream (destbytes));
+        destination = marshall.deserialise (obj, destdis);
+        
+        return new message<I> (type, destination, cost);
+      } else {
+        /* Otherwise via Java Object Serialisation */
+        return marshall.deserialise ((message<I>) null, bytes);
+      }
     }
     
     @Override
@@ -394,7 +463,7 @@ public class distancevector<I extends Serializable>
   public void up (I linksrc, byte [] data) {
     message<I> msg = null;
     try {
-      msg = marshall.deserialise (msg, data);
+      msg = message.deserialise (linksrc, data);
     } catch (Exception e) {
       debug.printf (debug.levels.ERROR, 
                     "%s: Unhandled message from %s, %s!\n",

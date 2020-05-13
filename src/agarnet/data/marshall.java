@@ -19,10 +19,13 @@ package agarnet.data;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import java.lang.*;
 /**
  * Helper to marshall data to/from byte form
  * @author paul
@@ -54,4 +57,56 @@ public class marshall {
     bos.close ();
     return bos.toByteArray ();
   }
+  
+  /* Helpers to serialise core types via a direct serialisation via
+   * Data{In,Out}putStream.
+   *
+   * Direct Data*Stream serialisation tends to be a lot more efficient than
+   * Object*Stream serdes.  These helpers are to facilitate DS based
+   * serialisation of core types, which can not be simply extended to
+   * implement serialisable.
+   */
+  public static <I> boolean serialisable_by_datastream (I obj) {
+    return (obj instanceof String
+            || obj instanceof Long
+            || obj instanceof Integer);
+  }
+  
+  public static void serialise (DataOutputStream dos, String s) 
+                     throws IOException {
+    dos.writeUTF (s);
+  }
+  public static void serialise (DataOutputStream dos, Long l) 
+                      throws IOException {
+    dos.writeLong (l);
+  }
+  public static void serialise (DataOutputStream dos, Integer i)
+                     throws IOException {
+    dos.writeInt (i);
+  }
+  public static <I> void serialise (DataOutputStream dos, I obj) 
+                     throws IOException {
+    if (obj instanceof String)
+      serialise (dos, (String) obj);
+    else if (obj instanceof Long)
+      serialise (dos, (Long) obj);
+    else if (obj instanceof Integer)
+      serialise (dos, (Integer) obj);
+    else
+      throw new IOException("serialise: Unknown type!");
+  }
+  
+  @SuppressWarnings ("unchecked")
+  public static <T> T deserialise (T obj, DataInputStream dis) 
+                      throws IOException {
+    if (obj instanceof String)
+      return (T) dis.readUTF ();
+    if (obj instanceof Long)
+      return (T) new Long (dis.readLong ());
+    if (obj instanceof Integer)
+      return (T) new Integer (dis.readInt ());
+
+    throw new IOException("deserialise_dis: Unknown type!");
+  }
+  
 }
