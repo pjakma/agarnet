@@ -10,7 +10,7 @@
     <version>9</version>
   </parent>
 
-  <groupId>agarnet</groupId>
+  <groupId>org.jakma.paul.agarnet</groupId>
   <artifactId>agarnet</artifactId>
   <version>0.1-SNAPSHOT</version>
 
