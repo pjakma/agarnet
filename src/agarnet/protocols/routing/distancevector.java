@@ -116,15 +116,7 @@ public class distancevector<I extends Serializable>
         DataInputStream dis = new DataInputStream (bis);
         msgtype type = msgtype.fromInt (dis.readInt ());
         int cost = dis.readInt ();
-        I destination = null;
-        
-        byte [] destbytes
-          = Arrays.copyOfRange (bytes, 
-                                bytes.length - bis.available (),
-                                bytes.length);
-        DataInputStream destdis 
-          = new DataInputStream (new ByteArrayInputStream (destbytes));
-        destination = marshall.deserialise (obj, destdis);
+        I destination = marshall.deserialise (obj, dis);
         
         return new message<I> (type, destination, cost);
       } else {
@@ -223,6 +215,7 @@ public class distancevector<I extends Serializable>
   class route_entries implements Iterable<vector> {
     final I dest;
     int bestcost = Integer.MAX_VALUE;
+    boolean needs_update = false;
 
     /* vector does not have equal consistent with compareTo, so
      * TreeSet can not be used 
@@ -252,12 +245,16 @@ public class distancevector<I extends Serializable>
       return Integer.MAX_VALUE;
     }
     
-    void send_updates (boolean cost_change) {
+    void send_updates () {
+      if (!needs_update)
+	return;
+      
       /* The best set and/or best cost has changed for this route:
        * - Withdraw to any neighbour that has transitioned into best-set
        * - Update to any neighbour that has transitioned out of best-set
        * - Update to to all neighbous not in best set if cost has changed. 
        */
+      needs_update = false;
       int bestcost = bestcost ();
       debug.printf("%s: %s cost %d bp: %s, rp: %s\n",
                    selfId, dest, bestcost, bestpaths, restpaths);
@@ -314,6 +311,7 @@ public class distancevector<I extends Serializable>
     }
     
     boolean update (I nexthop, int cost) {
+      needs_update = true;
       debug.printf("%s: %s -> %s, %d\n", selfId, dest, nexthop, cost);
       vector vec = adjrib.in (nexthop);
       int prevbestcost = bestcost ();
@@ -352,16 +350,12 @@ public class distancevector<I extends Serializable>
         bestpaths.add (vec);
       }
       
-      /* send_updates uses the vec.best flag to deduce state transition 
-       * and will set it
-       */
-      send_updates (prevbestcost == bestcost ());
-      
       return true;
     }
     
     
     void remove (I nexthop) {
+      needs_update = true;
       int prevbestcost = bestcost ();
       //vector vec = nexthop2vector.remove (nexthop);
       adjrib.entry adj = adjrib.get_entry (nexthop);
@@ -394,7 +388,6 @@ public class distancevector<I extends Serializable>
                 || vec.cost == newbestcost;
         newbestcost = vec.cost;
       }
-      send_updates (prevbestcost == newbestcost);
     }
 
     public String toString () {
@@ -439,6 +432,12 @@ public class distancevector<I extends Serializable>
       entries.update (nexthop, cost);
     }
     
+    void scan () {
+      rib.routes.forEach ((dest, routes) -> {
+        routes.send_updates ();
+      });
+    }
+    
     void remove (I dest, I nexthop) {
       route_entries entries = routes.get (dest);
       if (entries != null) /* this shouldn't happen really */
@@ -461,6 +460,13 @@ public class distancevector<I extends Serializable>
 
   rib rib = new rib ();
 
+  @Override
+  public void tick () {
+    super.tick ();
+    
+    rib.scan ();
+  }
+  
   public void up (I linksrc, byte [] data) {
     message<I> msg = null;
     try {
