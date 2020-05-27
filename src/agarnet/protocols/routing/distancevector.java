@@ -454,6 +454,13 @@ public class distancevector<I extends Serializable>
         entries.remove (nexthop);
     }
     
+    /* Remove all of a neighbours vectors */
+    void remove (I nexthop) {
+      routes.forEach ((dest, entries) -> {
+        remove (dest, nexthop);
+      });
+    }
+    
     Collection<vector> bestpaths (I dest) {
       route_entries entries = routes.get (dest);
       if (entries == null)
@@ -525,7 +532,7 @@ public class distancevector<I extends Serializable>
   public void link_remove (I neighbour) {
     debug.printf("%s: neighbour %s\n", selfId, neighbour);
     super.link_remove (neighbour);
-    /* do stuff... go through the rib and update affected vectors */
+    rib.remove (neighbour);
   }
 
   @Deprecated
