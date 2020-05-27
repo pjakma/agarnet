@@ -236,23 +236,26 @@ public class distancevector<I extends Serializable>
     }
     
     int bestcost () {
-      if (bestpaths.size () > 0) {
+      return bestcost;
+      /*if (bestpaths.size () > 0) {
         for (vector v : bestpaths)
           return v.cost;
-        //return bestcost;
       }
-      //return (bestcost = Integer.MAX_VALUE);
-      return Integer.MAX_VALUE;
+      return Integer.MAX_VALUE;*/
     }
     
-    void send_updates () {
+    boolean send_updates () {
       if (!needs_update)
-	return;
+	return false;
       
       /* The best set and/or best cost has changed for this route:
        * - Withdraw to any neighbour that has transitioned into best-set
        * - Update to any neighbour that has transitioned out of best-set
        * - Update to to all neighbous not in best set if cost has changed. 
+       *
+       * This method uses the 'best' flag on the vec to help determine state
+       * changes of a vec and this method is responsible for updating that
+       * flag.
        */
       needs_update = false;
       int bestcost = bestcost ();
@@ -308,6 +311,7 @@ public class distancevector<I extends Serializable>
           }
         }
       });
+      return true;
     }
     
     boolean update (I nexthop, int cost) {
@@ -330,13 +334,13 @@ public class distancevector<I extends Serializable>
       /* not best before or now, ensure in rest-paths and done */
       if (vec.cost > prevbestcost && !vec.best) {
         restpaths.add (vec);
-        return false;
+        return (needs_update = false);
       }
       
       /* already in best, and no-change, spurious update */
       if (vec.cost == prevbestcost && vec.best) {
         assert bestpaths.contains (vec);
-        return false;
+        return (needs_update = false);
       }
       
       /* addition to best path, make sure in bestpaths */
@@ -349,7 +353,7 @@ public class distancevector<I extends Serializable>
         bestpaths.clear ();
         bestpaths.add (vec);
       }
-      
+      bestcost = vec.cost;
       return true;
     }
     
@@ -357,7 +361,6 @@ public class distancevector<I extends Serializable>
     void remove (I nexthop) {
       needs_update = true;
       int prevbestcost = bestcost ();
-      //vector vec = nexthop2vector.remove (nexthop);
       adjrib.entry adj = adjrib.get_entry (nexthop);
       vector vec = adj.in;
       if (vec == null) return;
@@ -369,16 +372,20 @@ public class distancevector<I extends Serializable>
       if (vec.cost > prevbestcost) {
         boolean ret = restpaths.remove (vec);
         assert ret : restpaths;
+        needs_update = false;
         return;
       }
       
       boolean ret = bestpaths.remove (vec);
       assert ret : bestpaths;
       
-      if (bestpaths.size () > 0)
+      if (bestpaths.size () > 0) {
+        needs_update = false;
         return;
+      }
       
       int newbestcost = Integer.MAX_VALUE;
+      needs_update = true;
       
       while ((vec = restpaths.peek ()) != null
              && vec.cost <= newbestcost) {
@@ -388,6 +395,7 @@ public class distancevector<I extends Serializable>
                 || vec.cost == newbestcost;
         newbestcost = vec.cost;
       }
+      bestcost = newbestcost;
     }
 
     public String toString () {
@@ -434,6 +442,8 @@ public class distancevector<I extends Serializable>
     
     void scan () {
       rib.routes.forEach ((dest, routes) -> {
+        if (routes.needs_update)
+          setChanged ();
         routes.send_updates ();
       });
     }
@@ -452,7 +462,7 @@ public class distancevector<I extends Serializable>
     }
     
     public void dump_table (PrintStream out) {
-      rib.routes.forEach ((dest, routes) -> {
+      routes.forEach ((dest, routes) -> {
         out.println (routes);
       });
     }
@@ -463,7 +473,6 @@ public class distancevector<I extends Serializable>
   @Override
   public void tick () {
     super.tick ();
-    
     rib.scan ();
   }
   
