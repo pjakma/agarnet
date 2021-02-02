@@ -200,14 +200,18 @@ public abstract class AbstractSim<I extends Serializable,
       try {
         while (run.get ()) {
           nodeg.wait_ready ();
+          //Iterable<H> netiter
+          //  = this.get_random_tick () ? network.random_node_iterable ()
+          //                            : network;
+
           for (final H n : partition) {
             n.tick ();
-            debug.printf ("%s: tick node %s\n", this, n);
+            debug.printf ("%d: tick node %s\n", this.pid, n);
           }
           
           edgeg.wait_ready ();
           for (final H n : partition) {
-            debug.printf ("%s: ticking edges of %s\n", this, n);
+            debug.printf ("%d: ticking edges of %s\n", this.pid, n);
             tick_edges_of (n);
           }
           doneg.wait_ready ();
@@ -345,13 +349,22 @@ public abstract class AbstractSim<I extends Serializable,
 
     debug.printf ("gate states:\nnode_gate %s\nedge_gate %s\ndone_gate %s\n",
                   node_gate, edge_gate, done_gate);
-    while (ra_link.was_there (true) || ra_notconverged.was_there (false)) {
+    
+    /* XXX: The convergence condition sucks a bit.
+     *
+     * Some simulation's might not be good at knowing if they have
+     * converged/changed.  E.g., if it there were timers involved.  Others
+     * may know they are done, even if they are still producing packets (so
+     * link activity still there).
+     *
+     * So this is fragile and sucks.  It needs something better.  Not sure
+     * what.  Probably the convergence indication needs to reflect the
+     * certainty of the simulation. Design that when criteria are clearer.
+     */
+    while (ra_link.was_there (true) && ra_notconverged.was_there (false)) {
       /* Links have to be ticked over separately from nodes, otherwise
        * a message might get across multiple nodes and links in just one tick. 
        */
-      //Iterable<H> netiter
-      //  = this.get_random_tick () ? network.random_node_iterable ()
-      //                            : network;
       
       try {
         debug.println ("wait to queue nodes");
