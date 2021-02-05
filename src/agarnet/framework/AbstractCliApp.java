@@ -680,6 +680,9 @@ public abstract class AbstractCliApp<I extends Serializable,
     
     if (rw instanceof CartesianRewire<?,?>) {
       Layout.factory ("Random", network, model_size, 10).layout (1);
+      FloatVar range = (FloatVar)tconf.subopts.get (alg,"range");
+      CartesianRewire<H,link<H>> cr = (CartesianRewire<H, link<H>>) rw;
+      cr.range (range.get ());
     }
     
     if (rw instanceof MultiClassScaleFreeRewire<?,?>) {
@@ -690,7 +693,7 @@ public abstract class AbstractCliApp<I extends Serializable,
         mcsfr.p (p.get ());
     }
     
-    System.out.println ("rewire_alg.... " + rw);
+    debug.println ("rewire_alg.... " + rw);
     rw.rewire ();
   }
   
