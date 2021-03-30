@@ -57,9 +57,10 @@ public class RandomMove<N extends PositionableNode,L>
       
       if (from.getPosition ().distance (to.getPosition ()) > range)
         return null;
-      return el.getLabel (from, to);
+      return el.getEdge (from, to);
     }
     @Override
+    @SuppressWarnings({ "deprecation"})
     public L getLabel (N from, N to) {
       return getEdge (from, to);
     }

@@ -439,6 +439,7 @@ public abstract class AbstractCliApp<I extends Serializable,
             return _gen_link (from, to, bw, lat, lat);
           }
           @Override
+          @SuppressWarnings({ "deprecation"})
           public link<H> getLabel (H from, H to) {
             return getEdge (from, to);
           }
@@ -475,6 +476,7 @@ public abstract class AbstractCliApp<I extends Serializable,
       return _gen_link (from, to, bw, lat, lat);
     }
     @Override
+    @SuppressWarnings({ "deprecation"})
     public link<H> getLabel (H from, H to) {
       return getEdge (from, to);
     }

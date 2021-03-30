@@ -146,6 +146,7 @@ public class transport_protocol<I,N,L>
   }
   
   @Override
+  @SuppressWarnings({ "deprecation" /* link_update() */})
   public void link_update () {
     //debug.printf ("transport: update %s\n", this);
     _update_spf ();
