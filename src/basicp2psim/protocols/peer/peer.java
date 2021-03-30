@@ -24,8 +24,6 @@ public class peer<I,N> extends AbstractProtocol<I>
   Set<file> msgdb = new HashSet<file> ();
   /* for connected hosts */
   Simulation<I,N> sim;
-  /* currently connected hosts */
-  Set<I> connected;
   
   public peer (Simulation<I,N> sim) {
     this.sim = sim;
@@ -147,18 +145,10 @@ public class peer<I,N> extends AbstractProtocol<I>
   }
   
   @Override
-  public void link_update () {
-    Set<I> newconnected = sim.connected (selfId);
-    
-    /* some kind of link event, resend our DB to every /new/ connected
-     * neighbour, except where we're sure the neighbour already has that file.
-     */
-    if (newconnected != null)
-      for (I neigh : newconnected)
-        if (connected == null || !connected.contains (neigh))
-          for (file msg : msgdb)
-            if (should_send (neigh, msg))
-              send (neigh, msg);
-    connected = newconnected;
+  public void link_add (I neigh) {
+    super.link_add (neigh);
+    for (file msg : msgdb)
+      if (should_send (neigh, msg))
+        send (neigh, msg);    
   }
 }
