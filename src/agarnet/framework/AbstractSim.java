@@ -529,6 +529,9 @@ public abstract class AbstractSim<I extends Serializable,
     } else {
       debug.println("no arg");
       for (H h : network)
+        /* this isn't right... Ought to call link_remove(),
+         * but don't have the Ids
+         */
         h.link_update ();
     }
   }
