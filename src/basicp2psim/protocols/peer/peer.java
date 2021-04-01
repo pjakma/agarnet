@@ -18,10 +18,10 @@ public class peer<I,N> extends AbstractProtocol<I>
   /* track what's still to be sent to each neighbor */
   //Map<I, Queue<file>> neightxl = new HashMap<I, Queue<file>> ();
   /* Track what we know the neighbour must have in its DB */
-  Map<I, Set<file>> neighdb = new HashMap<I, Set<file>> ();
+  Map<I, Set<file>> neighdb = new HashMap<> ();
   
   /* DB of received, distinct messages */
-  Set<file> msgdb = new HashSet<file> ();
+  Set<file> msgdb = new HashSet<> ();
   /* for connected hosts */
   Simulation<I,N> sim;
   
@@ -34,7 +34,6 @@ public class peer<I,N> extends AbstractProtocol<I>
     super.reset ();
     msgdb.clear ();
     neighdb.clear ();
-    connected = null;
   }
 
   public boolean should_accept (I from, file msg) {
@@ -149,6 +148,12 @@ public class peer<I,N> extends AbstractProtocol<I>
     super.link_add (neigh);
     for (file msg : msgdb)
       if (should_send (neigh, msg))
-        send (neigh, msg);    
+        send (neigh, msg);
+  }
+  
+  @Override
+  public void link_remove (I neigh) {
+    super.link_remove (neigh);
+    neighdb.remove (neigh);
   }
 }

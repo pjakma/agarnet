@@ -31,7 +31,6 @@ public abstract class AbstractProtocol<N>
   protected long ticks = 0;
   private final int stat_length = stat.values ().length;
   private boolean changed = false;
-  protected Set<N> connected = new HashSet<> ();;
   
   /* Unique ID for this instance of this type of protocol - it may
    * be shared across protocols within the same host
@@ -97,14 +96,12 @@ public abstract class AbstractProtocol<N>
   @Override
   public void link_add (N node) {
     debug.printf ("%s: of %s\n", selfId, node);
-    connected.add (node);
     setChanged ();
   }
 
   @Override
   public void link_remove (N node) {
     debug.printf ("%s: of %s\n", selfId, node);
-    connected.remove (node);
     setChanged ();
   }
 
