@@ -50,6 +50,8 @@ import agarnet.data.marshall;
  */
 public class distancevector<I extends Serializable>
              extends AbstractProtocol<I> {
+  Set<I> connected = new HashSet<> ();
+  
   static public enum msgtype { 
     UPDATE(1), WITHDRAW(2);
     
@@ -507,6 +509,7 @@ public class distancevector<I extends Serializable>
   public void link_add (I neighbour) {
     debug.printf("%s: %s\n", selfId, neighbour);
     super.link_add (neighbour);
+    connected.add (neighbour);
     
     send (neighbour, 
           new message<> (msgtype.UPDATE, selfId, 1));
@@ -532,6 +535,7 @@ public class distancevector<I extends Serializable>
   public void link_remove (I neighbour) {
     debug.printf("%s: neighbour %s\n", selfId, neighbour);
     super.link_remove (neighbour);
+    connected.remove (neighbour);
     rib.remove (neighbour);
   }
 
