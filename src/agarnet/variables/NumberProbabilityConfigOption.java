@@ -19,7 +19,11 @@ package agarnet.variables;
 
 import agarnet.variables.atoms.NumberProbVar;
 
-/* ConfigurableOption wrapper around NumeberProb */
+/** ConfigurableOption wrapper around NumberProb 
+ *
+ * Should be deprecated.  Can use NumberConfigOption<T> instead, with any
+ * NumberVar.
+ */
 public class NumberProbabilityConfigOption extends ConfigurableOption {
   final NumberProbVar val;
   

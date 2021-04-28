@@ -29,7 +29,7 @@ public class NumberProbVar extends FloatVar implements NumberVar {
    * @return A float value, which represents a probability if 0 <= x < 1 or
    *         or x ends in with a % and 0 < x <= 100, an integer number otherwise.
    */
-  private static float number_probability (String s)
+  protected static float number_probability (String s)
                        throws NumberFormatException {
     boolean pc = false;
     float num;
@@ -69,9 +69,4 @@ public class NumberProbVar extends FloatVar implements NumberVar {
   public FloatVar set (String s) {
     return super.set (number_probability (s));
   }
-  @Override
-  public String toString () {
-    return super.toString ();
-  }
-  
 }
