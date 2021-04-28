@@ -19,7 +19,7 @@ import org.nongnu.multigraph.metrics.*;
 import basicp2psim.protocols.peer.leech;
 import basicp2psim.protocols.peer.peer;
 import basicp2psim.protocols.peer.seed;
-
+import basicp2psim.protocols.peer.flakey;
 
 import agarnet.anipanel;
 import agarnet.framework.AbstractCliApp;
@@ -67,6 +67,12 @@ public class simapp extends AbstractCliApp<Long, simhost<Long>> implements Obser
       new seed<Long,simhost<Long>> (this,
            ((NumberVar)conf_seeds.subopts.get ("max")).get ().intValue (),
            ((NumberVar)conf_seeds.subopts.get ("period")).get ().intValue ()),
+    };
+  }
+  @SuppressWarnings ({"unchecked","rawtypes"})
+  private protocol<Long> [] new_protstack_flakey () {
+    return new protocol [] {
+      new flakey (conf_flakeyprob.get ()),
     };
   }
   
@@ -123,6 +129,11 @@ public class simapp extends AbstractCliApp<Long, simhost<Long>> implements Obser
       for (int i = 0; i < conf_leeches.get (); i++)
         network.add (get_host (num++, simhost.Node.leech, true, new_protstack_leech ()));
     }
+    
+    if (conf_flakes.get () >= 1) {
+      for (int i = 0; i < conf_flakes.get (); i++)
+        network.add (get_host (num++, simhost.Node.flakey, true, new_protstack_flakey ()));
+    }
       
     network.add (get_host (num, simhost.Node.seed, false, new_protstack_seed ()));
   }
@@ -134,6 +145,20 @@ public class simapp extends AbstractCliApp<Long, simhost<Long>> implements Obser
       "number of peers to create",
       LongOpt.REQUIRED_ARGUMENT, 1, Integer.MAX_VALUE)
       .set (10);
+  final static IntConfigOption conf_flakes
+    = new IntConfigOption (
+      "flakes", 'f', "<number>",
+      "number of 'flaky' nodes to create, implemented with native code.",
+      LongOpt.REQUIRED_ARGUMENT, 0, Integer.MAX_VALUE)
+      .set (0);
+  final static NumberConfigOption conf_flakeyprob
+    = new NumberConfigOption (
+        ProbVar.class,
+        "flakeyprob", 'F', "<probability>",
+        "Probability of a flakey node forwarding a message",
+        LongOpt.REQUIRED_ARGUMENT)
+        .parse ("50%");
+
   final static NumberProbabilityConfigOption conf_leeches
     = new NumberProbabilityConfigOption (
         "leeches", 'L', "<number|probability>",
@@ -182,7 +207,8 @@ public class simapp extends AbstractCliApp<Long, simhost<Long>> implements Obser
     
     /* Add P2P sim specific config-vars */
     confvars.addAll (new ArrayList<ConfigurableOption> (Arrays.asList (
-                            conf_peers, conf_leeches, conf_perturb)));
+                            conf_peers, conf_flakes, conf_flakeyprob,
+                            conf_leeches, conf_perturb)));
     
     if ((c = ConfigurableOption.getopts ("simapp", args, confvars)) != 0)
       usage ("Unknown argument: " + (char) c);

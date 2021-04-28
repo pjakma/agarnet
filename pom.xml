@@ -29,6 +29,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <src.dir>src</src.dir>
     <test.dir>tests</test.dir>
+    <!-- HawtJNI props 
+         customPackageDirectory: added to HawtJNI generated source
+         nativeSourceDirectory: Overrides HawtJNI generated source
+         (AFAICT)
+      -->
+  
+    <customPackageDirectory>${project.basedir}/src/native-package</customPackageDirectory>
+    <nativeSourceDirectory>${project.basedir}/src/native-src</nativeSourceDirectory>
   </properties>
 
   <profiles>
@@ -42,6 +50,16 @@
       </properties>
     </profile>
 
+    <profile>
+      <repositories>
+        <repository>
+          <id>project.local</id>
+          <name>project</name>
+          <url>file:${project.basedir}/repo</url>
+        </repository>
+      </repositories>
+    </profile>
+    
     <profile>
       <id>ossrh</id>
       <properties>
@@ -88,7 +106,9 @@
     </profile>
 
   </profiles>
-    
+
+  <packaging>jar</packaging>
+
   <build>
     <sourceDirectory>${src.dir}</sourceDirectory>
     <testSourceDirectory>${test.dir}</testSourceDirectory>
@@ -98,6 +118,7 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.1</version>
         </plugin>
+
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
@@ -143,6 +164,26 @@
             </executions>
         </plugin>
 
+        <plugin>
+          <groupId>org.fusesource.hawtjni</groupId>
+          <artifactId>hawtjni-maven-plugin</artifactId><!-- was maven-hawtjni-plugin until 1.15 -->
+          <version>1.17</version>
+          <configuration>
+            <customPackageDirectory>${customPackageDirectory}</customPackageDirectory>
+            <!--<nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>-->
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>generate</goal>
+                <goal>build</goal>
+                <goal>package-jar</goal>
+                <goal>package-source</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
       </plugins>
   </build>
 
@@ -164,13 +205,10 @@
        <artifactId>MultiGraph</artifactId>
        <version>0.3</version>
     </dependency>
-    <!-- <dependency>
-      <groupId>org.nongnu.multigraph</groupId>
-      <artifactId>MultiGraph</artifactId>
-      <version>1.0</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/../MultiGraph/build/jar/MultiGraph.jar</systemPath>
-    </dependency> -->
-
+    <dependency>
+      <groupId>org.fusesource.hawtjni</groupId>
+      <artifactId>hawtjni-runtime</artifactId>
+      <version>1.17</version>
+    </dependency>
   </dependencies>
 </project>

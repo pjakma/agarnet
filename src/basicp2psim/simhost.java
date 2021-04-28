@@ -24,17 +24,19 @@ public class simhost<I extends Serializable> extends AnimatableHost<I, simhost<I
   public final Node type;
   
   public enum Node {
-    seed, leech, peer;
+    seed, leech, peer, flakey;
     private final static Color colours[] = {
       Color.CYAN.brighter ().brighter ().brighter (),
       Color.GREEN,
       Color.YELLOW,
+      Color.BLUE.brighter().brighter(),
     };
     private static Map<String,Node> peer2node = new HashMap <String,Node> ();
     static {
       peer2node.put (basicp2psim.protocols.peer.peer.class.getName (), peer);
       peer2node.put (basicp2psim.protocols.peer.seed.class.getName (), seed);
       peer2node.put (basicp2psim.protocols.peer.leech.class.getName (), leech);
+      peer2node.put (basicp2psim.protocols.peer.flakey.class.getName (), flakey);
     }
     public Color colour () {
       return colours[this.ordinal ()];

@@ -11,7 +11,12 @@
 PROJECTHOME="$(realpath $(dirname "$0")/..)"
 
 CPATH="$PROJECTHOME/MultiGraph/build/jar/MultiGraph.jar"
-CPATH="$CPATH:$PROJECTHOME/agarnet/build/jar/agarnet.jar"
+#CPATH="$CPATH:$PROJECTHOME/agarnet/build/jar/agarnet.jar"
+
+CPATH="$CPATH:$PROJECTHOME/agarnet/target/agarnet-0.1.jar"
+CPATH="$CPATH:$PROJECTHOME/agarnet/target/agarnet-0.1-linux64.jar"
+
+CPATH="$CPATH:/usr/lib/java/hawtjni/hawtjni-runtime.jar"
 CPATH="$CPATH:/usr/share/java/gnu.getopt.jar"
 #CPATH="$CPATH:$PROJECTHOME/kcoresim/build/jar/kcoresim.jar"
 #PROFOPTS="(-Xprof)"
