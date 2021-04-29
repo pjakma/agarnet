@@ -203,7 +203,7 @@
     <dependency>
        <groupId>org.nongnu.multigraph</groupId>
        <artifactId>MultiGraph</artifactId>
-       <version>0.3</version>
+       <version>0.4</version>
     </dependency>
     <dependency>
       <groupId>org.fusesource.hawtjni</groupId>
