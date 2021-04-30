@@ -134,6 +134,33 @@ bytes_to_str (char *str, size_t len, struct native_buffer *buf) {
   return str;
 }
 
+void flakeyproto_flood (void *p, long long from, uint8_t *data, size_t len) {
+    struct flakey_proto_data *proto = (struct flakey_proto_data *) p;
+    struct native_buffer *buf = &(struct native_buffer) {
+       .data = data, .len = len, .capacity = len
+    };
+    char strbuf[200];
+    _debug (proto, "%s:%lu: flood from %llu, %zu bytes\n",
+            __func__, proto->id, from, len);
+    _debug (proto, "%s:%lu: msg bytes %s\n", __func__, proto->id, 
+            bytes_to_str (strbuf, sizeof (strbuf), buf));
+
+    for (int i = 0; i <= proto->maxneighbour; i++) {
+      if (i == from || proto->neighbours[i] == false)
+        continue;
+      
+      if (random () > proto->rand_threshold)
+        continue;
+
+      _debug (proto, "%s:%lu: send to %llu\n",
+              __func__, proto->id, i);
+    
+      assert (proto->send_notify);
+      
+      proto->send_notify (proto, i, buf);
+    }  
+}
+
 void flakeyproto_up (const void *p, long long from, uint8_t *data, size_t len) {
     struct flakey_proto_data *proto = (struct flakey_proto_data *) p;
     struct native_buffer *buf = &(struct native_buffer) {
@@ -147,22 +174,8 @@ void flakeyproto_up (const void *p, long long from, uint8_t *data, size_t len) {
 
     if (!proto->send_notify)
       return;
-    
-    for (int i = 0; i <= proto->maxneighbour; i++) {
-      if (proto->neighbours[i] == false)
-        continue;
-    
-      _debug (proto, "%s:%lu: consider send to %llu\n",
-              __func__, proto->id, i);
-      
-      if (random () > proto->rand_threshold)
-        continue;
 
-      _debug (proto, "%s:%lu: send to %llu\n",
-              __func__, proto->id, i);
-    
-      proto->send_notify (proto, i, buf);
-    }
+    flakeyproto_flood (p, from, data, len);
 }
 
 size_t flakeyproto_send_out (const void *p, void *msgp,
@@ -177,6 +190,8 @@ size_t flakeyproto_send_out (const void *p, void *msgp,
           __func__, proto->id, len, cpylen);
   return cpylen;
 }
+
+
 
 void flakeyproto_down (const void *p, long long to, uint8_t *data, size_t len) {
     struct native_buffer *buf = &(struct native_buffer) {

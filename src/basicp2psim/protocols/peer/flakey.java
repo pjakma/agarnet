@@ -122,6 +122,14 @@ public class flakey extends AbstractProtocol<Long> {
     @JniArg(cast="size_t", flags={CRITICAL, NO_OUT}) long len
   );
 
+  @JniMethod(accessor="flakeyproto_flood")
+  public static native void native_flood(
+    @JniArg(cast="const void *", flags={ArgFlag.CRITICAL}) long self,
+    long from,
+    @JniArg(cast="uint8_t *", flags={CRITICAL, NO_OUT}) byte [] buf,
+    @JniArg(cast="size_t", flags={CRITICAL, NO_OUT}) long len
+  );
+
   @JniMethod(cast="void *", accessor="flakeyproto_link_add") 
   public static final native long native_link_add (
     @JniArg(cast="void *", flags={ArgFlag.CRITICAL}) long self,
@@ -170,9 +178,16 @@ public class flakey extends AbstractProtocol<Long> {
 
   
   private long native_instance;
-  public flakey (float flakeyprob) {
+  private int num_to_seed;
+  
+  public flakey (float flakeyprob, int num_to_seed) {
     native_instance = native_new (flakeyprob);
     native_set_debug (native_instance, debug_cb.getAddress ());
+    this.num_to_seed = num_to_seed;
+  }
+  
+  public flakey (float flakeyprob) {
+    this (flakeyprob, 0);
   }
   
   public void up (Long src, byte [] data) {
@@ -249,10 +264,40 @@ public class flakey extends AbstractProtocol<Long> {
     native_down (native_instance, dst, data, data.length);
   }
   
+  private void seed_file () {
+    file f = new file (selfId + "/" + num_to_seed, 
+                       "blah blah blah".getBytes ());
+    debug.printf ("seed %s: seeding %s\n", selfId, f);
+    try {
+      byte [] data = f.serialise ().clone();
+      Callback send_cb = new Callback (this, "send_ready", 3);
+      native_set_send_notify (native_instance, send_cb.getAddress ());
+      native_flood (native_instance, selfId, data, data.length);
+      send_cb.dispose ();
+    } catch (Exception e) {
+      debug.println ("Unhandled message: " + e);
+    }
+  }
+
+
+  @Override
+  public void tick () {
+    debug.printf ("flakey %s tick %d\n", selfId, ticks);
+    
+    if (num_to_seed > 0) {
+      seed_file ();
+      num_to_seed--;
+    } 
+    super.tick ();
+  }
+  
+  @Override  
   public void link_add (Long neighbour) {
    debug.println(selfId + ": framework native link_add");
    native_instance = native_link_add (native_instance, neighbour);
   }
+  
+  @Override
   public void link_remove (Long neighbour) {
    debug.println(selfId + ":framework native link_remove");
    native_link_remove (native_instance, neighbour);
