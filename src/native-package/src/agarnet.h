@@ -19,10 +19,11 @@
 #define AGARNET_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 /* see comments in flakey_proto.java */
 struct native_buffer {
-  char *data;
+  uint8_t *data;
   size_t len;
   size_t capacity;
 };

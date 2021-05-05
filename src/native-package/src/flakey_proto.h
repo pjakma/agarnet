@@ -32,7 +32,7 @@ void flakeyproto_up (const void *proto, long long from, uint8_t *data, size_t le
 void flakeyproto_down (const void *proto, long long to, uint8_t *data, size_t len);
 void flakeyproto_set_send_notify (void *proto, void (*send_cb) (void *, long long, void *));
 size_t flakeyproto_send_out (const void *proto, void *msgp, uint8_t *data, size_t len);
-void flakeyproto_flood (void *proto, long long from, uint8_t *data, size_t len);
+void flakeyproto_flood (const void *proto, long long from, uint8_t *data, size_t len);
 void *flakeyproto_link_add (void *p, long long neighbour);
 void flakeyproto_link_remove (const void *p, long long neighbour);
 

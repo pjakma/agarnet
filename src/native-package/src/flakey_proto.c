@@ -134,7 +134,8 @@ bytes_to_str (char *str, size_t len, struct native_buffer *buf) {
   return str;
 }
 
-void flakeyproto_flood (void *p, long long from, uint8_t *data, size_t len) {
+void flakeyproto_flood (const void *p, long long from, 
+                        uint8_t *data, size_t len) {
     struct flakey_proto_data *proto = (struct flakey_proto_data *) p;
     struct native_buffer *buf = &(struct native_buffer) {
        .data = data, .len = len, .capacity = len

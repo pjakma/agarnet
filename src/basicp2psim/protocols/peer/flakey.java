@@ -172,7 +172,7 @@ public class flakey extends AbstractProtocol<Long> {
   public static final native long native_send_out (
     @JniArg(cast="void *", flags={ArgFlag.CRITICAL}) long self,
     @JniArg(cast="void *", flags={ArgFlag.CRITICAL}) long msgp,
-    @JniArg(cast="char *", flags={CRITICAL}) byte[] msg,
+    @JniArg(cast="uint8_t *", flags={CRITICAL}) byte[] msg,
     @JniArg(cast="size_t") long length
   );
 
