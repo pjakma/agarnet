@@ -35,8 +35,8 @@
 
 struct flakey_proto_data {
   long long id;
+  /* highest neighbour id */
   long long maxneighbour;
-  size_t len;
   long int rand_threshold;
   
   /* callback to notify for debug print event */
@@ -53,12 +53,12 @@ struct flakey_proto_data {
   bool neighbours[0];
 };
 
-#define PROTO_TABLE_INIT_SIZE 1000
+#define PROTO_TABLE_INIT_SIZE 100
 
 static
-size_t flakeyproto_tablesize (int maxneighbour) {
+size_t flakeyproto_tablesize (int numneighbours) {
   return sizeof (struct flakey_proto_data)
-         + ((maxneighbour + 1) * sizeof (bool));
+         + (numneighbours * sizeof (bool));
 }
 
 static
@@ -72,7 +72,7 @@ flakeyproto_debug (struct flakey_proto_data *proto, const char *fmt, ...) {
   va_start (ap, fmt);
   vsnprintf (proto->debug_msg, sizeof (proto->debug_msg), fmt, ap);
   va_end (ap);
-
+  //fprintf(stderr, "%s:%llu: %s\n", __func__, proto->id, proto->debug_msg);
   proto->debug_notify (proto);
 }
 #define _debug flakeyproto_debug
@@ -94,7 +94,7 @@ void *flakeyproto_new (float fraction) {
   /* no decent data lib in C... just a quick hack for example use */
   struct flakey_proto_data *proto
     = calloc (1, flakeyproto_tablesize (PROTO_TABLE_INIT_SIZE));
-  proto->len = PROTO_TABLE_INIT_SIZE;
+  proto->maxneighbour = PROTO_TABLE_INIT_SIZE - 1;
   proto->rand_threshold = (long int) (((float) RAND_MAX) * ((float) fraction));
   return proto;
 }
@@ -163,15 +163,8 @@ void flakeyproto_flood (void *p, long long from, uint8_t *data, size_t len) {
 
 void flakeyproto_up (const void *p, long long from, uint8_t *data, size_t len) {
     struct flakey_proto_data *proto = (struct flakey_proto_data *) p;
-    struct native_buffer *buf = &(struct native_buffer) {
-       .data = data, .len = len, .capacity = len
-    };
-    char strbuf[200];
     _debug (proto, "%s:%lu: from %llu, %zu bytes\n",
             __func__, proto->id, from, len);
-    //_debug (proto, "%s:%lu: msg bytes %s xx\n", __func__, proto->id, 
-    //        bytes_to_str (strbuf, sizeof (strbuf), buf));
-
     if (!proto->send_notify)
       return;
 
@@ -206,17 +199,17 @@ void *flakeyproto_link_add (void *p, long long neighbour) {
   struct flakey_proto_data *proto = (struct flakey_proto_data *) p;
   _debug (proto, "%s:%lu: neighbour %lu\n", __func__, proto->id, neighbour);
   
-  if (neighbour > proto->maxneighbour)
-    proto->maxneighbour = neighbour;
-  if (proto->len < proto->maxneighbour + 1) {
-    size_t newsize = flakeyproto_tablesize (neighbour);
+  if (neighbour > proto->maxneighbour) {
+    size_t newsize = flakeyproto_tablesize (neighbour * 2);
     struct flakey_proto_data *newproto = calloc (1, newsize);
-    _debug (proto, "%s: Resizing to %u neighbours, size %zu to %zu\n",
-            __func__, proto->maxneighbour, proto->len, newsize);
-    memcpy (newproto, proto, flakeyproto_tablesize (proto->len));
+    _debug (proto, "%s: Resizing to maxneighbour %u, size %zu to %zu\n",
+            __func__, proto->maxneighbour, 
+            flakeyproto_tablesize (proto->maxneighbour + 1),
+            newsize);
+    memcpy (newproto, proto, flakeyproto_tablesize (proto->maxneighbour + 1));
     free (proto);
     proto = newproto;
-    proto->len = newsize;
+    proto->maxneighbour = neighbour;
   }
   
   proto->neighbours[neighbour] = true;
@@ -227,7 +220,7 @@ void *flakeyproto_link_add (void *p, long long neighbour) {
 void flakeyproto_link_remove (const void *p, long long neighbour) {
   struct flakey_proto_data *proto = (struct flakey_proto_data *) p;
   assert (neighbour <= proto->maxneighbour);
-  _debug (proto, "%s:%lu: neighbour %lu\n", __func__, proto->len, neighbour);
+  _debug (proto, "%s:%lu: neighbour %lu\n", __func__, proto->id, neighbour);
 
   proto->neighbours[neighbour] = false;
 }
