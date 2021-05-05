@@ -22,9 +22,9 @@ CPATH="$CPATH:/usr/share/java/gnu.getopt.jar"
 #CPATH="$CPATH:$PROJECTHOME/kcoresim/build/jar/kcoresim.jar"
 #PROFOPTS="(-Xprof)"
 #PROFOPTS="(-Xrunhprof)"
-GCOPTS=(-XX:+UseConcMarkSweepGC)
+#GCOPTS=(-XX:+UseConcMarkSweepGC)
 JAVAOPTS=("${JAVAOPTS[@]}" -XX:+UseLargePages)
-JAVAOPTS=("${JAVAOPTS[@]}" -Xverify:none)
+#JAVAOPTS=("${JAVAOPTS[@]}" -Xverify:none)
 #  -Dsun.java2d.opengl=True needed for Java2D to not be super-slow,
 # with anti-aliasing on Linux.
 JAVAOPTS=("${JAVAOPTS[@]}" '-DuseAA=true' '-Dsun.java2d.opengl=True')
