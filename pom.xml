@@ -33,10 +33,14 @@
          customPackageDirectory: added to HawtJNI generated source
          nativeSourceDirectory: Overrides HawtJNI generated source
          (AFAICT)
+         
+         See the configuration section for hawtjni-maven-plugin for use.
+         These are just up-front convenience properties.
       -->
   
     <customPackageDirectory>${project.basedir}/src/native-package</customPackageDirectory>
     <nativeSourceDirectory>${project.basedir}/src/native-src</nativeSourceDirectory>
+    <configureArgs>CFLAGS=-g3 -Wall -O2</configureArgs>
   </properties>
 
   <profiles>
@@ -171,6 +175,7 @@
           <configuration>
             <customPackageDirectory>${customPackageDirectory}</customPackageDirectory>
             <!--<nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>-->
+            <configureArgs>${configureArgs}</configureArgs>
           </configuration>
           <executions>
             <execution>
